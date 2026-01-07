@@ -1,8 +1,6 @@
-from fastapi import FastAPI, Depends
-from models.user import User
-from schemas.user import UserBase, UserRead
-from dependencies import engine, get_db, Base
-from router import user
+from fastapi import FastAPI
+from src.dependencies import engine, Base
+from src.router import user
 
 
 app = FastAPI()
