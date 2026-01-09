@@ -1,19 +1,27 @@
-import uuid
-from pydantic import BaseModel,EmailStr
+from pydantic import BaseModel, EmailStr
 
 
 
 class UserBase(BaseModel):
-    id: uuid.UUID
     email: EmailStr
     name: str
     password: str
 
 
+class ReadUser(BaseModel):
+    email: EmailStr
+    name: str
+
+class UpdateUser(BaseModel):
+    email: EmailStr
+
+
 class UserCreate(BaseModel):
-    id: uuid.UUID
     email: EmailStr
     name: str
 
     class Config:
         from_attributes = True
+
+class UserDelete(BaseModel):
+    email: EmailStr

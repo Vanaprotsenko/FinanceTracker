@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.dependencies import engine, Base
+from src.db.database import engine, Base
 from src.router import user
 
 
