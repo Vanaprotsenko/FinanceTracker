@@ -1,5 +1,6 @@
 from src.models.user import User
 from src.repositories.user import UserRepository
+from src.services.auth_service import AuthService
 
 
 class UserService:
@@ -11,13 +12,24 @@ class UserService:
         if existing_user:
             raise ValueError("User already exists")
 
+        hashed_password = AuthService.hash_password(password)
         user = User(
             name=name,
             email=email,
-            password=password,
+            password=hashed_password,
         )
 
         return self.user_repository.add(user)
+
+    def login(self, email: str, password: str) -> str:
+        user = self.user_repository.get_by_email(email)
+        if not user:
+            raise ValueError("Invalid credentials")
+
+        if not AuthService.verify_password(password, user.password):
+            raise ValueError("Invalid credentials")
+
+        return AuthService.create_access_token(data={"sub": user.id})
 
     def read_user(self, email: str) -> User:
         return self.user_repository.read(email)
@@ -37,6 +49,6 @@ class UserService:
             raise ValueError("User not found")
 
         user.name = name
-        user.password = password
+        user.password = AuthService.hash_password(password)
 
         return self.user_repository.update(user)

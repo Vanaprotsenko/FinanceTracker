@@ -10,6 +10,9 @@ class UserRepository(Repository):
     def get_by_email(self, email: str) -> User:
         return self.session.query(User).filter_by(email=email).first()
 
+    def get_by_id(self, id: int) -> User:
+        return self.session.query(User).filter_by(id=id).first()
+
     def add(self, user: User):
         self.session.add(user)
         self.session.commit()
