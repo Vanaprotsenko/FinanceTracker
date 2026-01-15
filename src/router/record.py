@@ -2,7 +2,7 @@ import uuid
 from fastapi import Depends, APIRouter, HTTPException, status
 from src.db.database import get_db
 from src.repositories.record import RecordRepository
-from src.schemas.record import RecordBase, RecordUpdate, RecordCreate, RecordDelete, RecordRead
+from src.schemas.record import RecordUpdate, RecordCreate, RecordRead, RecordResponse
 from sqlalchemy.orm import Session
 from src.services.record import RecordService
 from src.dependencies.auth import get_current_user_id
@@ -18,7 +18,7 @@ async def list_records(
     service = RecordService(repository)
     return service.list_records(user_id)
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=RecordRead)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=RecordResponse)
 async def create_record(
         record: RecordCreate,
         user_id: uuid.UUID = Depends(get_current_user_id),
@@ -28,7 +28,7 @@ async def create_record(
     service = RecordService(repository)
     record = service.create_record(user_id, record)
 
-    return {"record": record, "currency":record.currency, "amount":record.amount, "type":record.type, "description":record.description}
+    return {"id": record.id}
 
 @router.get("/{record_id}", status_code=200, response_model=RecordRead)
 async def read_record(

@@ -11,6 +11,9 @@ class RecordCreate(RecordBase):
     class Config:
         orm_mode = True
 
+class RecordResponse(BaseModel):
+    id: uuid.UUID
+
 class RecordRead(RecordBase):
     id: uuid.UUID
 

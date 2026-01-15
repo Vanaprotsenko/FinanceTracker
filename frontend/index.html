@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceTracker - Manage Your Wealth</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dark-theme">
+    <div id="app">
+        <!-- Navigation -->
+        <nav id="main-nav" class="hidden">
+            <div class="nav-container">
+                <div class="logo">Finance<span>Tracker</span></div>
+                <div class="nav-links">
+                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-view="stats">Statistics</button>
+                    <button id="logout-btn" class="nav-btn logout">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <main id="content">
+            <!-- Auth Landing Section -->
+            <section id="auth-section" class="view">
+                <div class="auth-container">
+                    <div class="auth-card glass">
+                        <div class="auth-header">
+                            <h1 id="auth-title">Welcome Back</h1>
+                            <p id="auth-subtitle">Login to track your finances</p>
+                        </div>
+                        
+                        <div id="login-form-container">
+                            <form id="login-form">
+                                <div class="form-group">
+                                    <label for="login-email">Email</label>
+                                    <input type="email" id="login-email" placeholder="name@example.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="login-password">Password</label>
+                                    <input type="password" id="login-password" placeholder="••••••••" required>
+                                </div>
+                                <button type="submit" class="btn primary-btn">Login</button>
+                            </form>
+                            <p class="auth-footer">Don't have an account? <span id="switch-to-signup">Sign Up</span></p>
+                        </div>
+
+                        <div id="signup-form-container" class="hidden">
+                            <form id="signup-form">
+                                <div class="form-group">
+                                    <label for="signup-name">Full Name</label>
+                                    <input type="text" id="signup-name" placeholder="John Doe" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="signup-email">Email</label>
+                                    <input type="email" id="signup-email" placeholder="name@example.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="signup-password">Password</label>
+                                    <input type="password" id="signup-password" placeholder="••••••••" required>
+                                </div>
+                                <button type="submit" class="btn primary-btn">Sign Up</button>
+                            </form>
+                            <p class="auth-footer">Already have an account? <span id="switch-to-login">Login</span></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="view hidden">
+                <div class="dashboard-header">
+                    <h2>Your Records</h2>
+                    <button id="add-record-btn" class="btn primary-btn">+ Add Record</button>
+                </div>
+                
+                <div class="records-container glass">
+                    <table id="records-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="records-body">
+                            <!-- Records will be injected here -->
+                        </tbody>
+                    </table>
+                    <div id="no-records" class="hidden">
+                        <p>No records found. Start by adding one!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statistics Section -->
+            <section id="stats-section" class="view hidden">
+                <div class="stats-header">
+                    <h2>Financial Summary</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <h3>Income vs Expenses</h3>
+                        <div class="chart-container">
+                            <canvas id="incomeExpenseChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="stat-card glass summary-totals">
+                        <h3>Balance</h3>
+                        <div class="balance-display">
+                            <div class="total-item income">
+                                <span class="label">Total Income</span>
+                                <span id="total-income" class="value">$0.00</span>
+                            </div>
+                            <div class="total-item expense">
+                                <span class="label">Total Expenses</span>
+                                <span id="total-expense" class="value">$0.00</span>
+                            </div>
+                            <hr>
+                            <div class="total-item net">
+                                <span class="label">Net Balance</span>
+                                <span id="net-balance" class="value">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Record Modal -->
+        <div id="record-modal" class="modal hidden">
+            <div class="modal-content glass">
+                <div class="modal-header">
+                    <h2 id="modal-title">Add New Record</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <form id="record-form">
+                    <input type="hidden" id="record-id">
+                    <div class="form-group">
+                        <label for="record-description">Description</label>
+                        <input type="text" id="record-description" placeholder="Lunch, Salary, Rent..." required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="record-amount">Amount</label>
+                            <input type="number" id="record-amount" step="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="record-currency">Currency</label>
+                            <select id="record-currency">
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="UAH">UAH</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="record-type">Type</label>
+                        <select id="record-type">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn primary-btn">Save Record</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
