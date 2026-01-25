@@ -11,6 +11,14 @@ services:
       db:
         condition: service_healthy
 
+  telegram-bot:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: python /code/src/bot/bot.py
+    env_file:
+      - .env
+
   db:
     image: postgres:16-alpine
     ports:

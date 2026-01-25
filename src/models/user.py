@@ -11,4 +11,6 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, nullable=False)
     name = Column(String)
+    telegram_id = Column(String, unique=True, nullable=True)
+    telegram_username = Column(String, unique=True, nullable=True)
     password = Column(String, nullable=False)

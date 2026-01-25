@@ -32,6 +32,9 @@ class UserRepository(Repository):
         self.session.commit()
         return user
 
+    def get_by_telegram_id(self, telegram_id: str) -> User:
+        return self.session.query(User).filter_by(telegram_id=str(telegram_id)).first()
+
     def update(self, user: User) -> User:
         self.session.commit()
         self.session.refresh(user)

@@ -4,8 +4,13 @@ const API_URL = ''; // Same origin as the static files when served from FastAPI
 const state = {
     token: localStorage.getItem('token'),
     view: 'dashboard',
-    records: []
+    records: [],
+    tg: window.Telegram ? window.Telegram.WebApp : null
 };
+
+if (state.tg) {
+    state.tg.expand();
+}
 
 // DOM Elements
 const authSection = document.getElementById('auth-section');
@@ -90,14 +95,25 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const password = document.getElementById('login-password').value;
 
     try {
+        const body = { email, password };
+        if (state.tg && state.tg.initData) {
+            body.init_data = state.tg.initData;
+        }
+
         const data = await apiFetch('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify(body)
         });
         state.token = data.access_token;
         localStorage.setItem('token', state.token);
         showToast('Logged in successfully', 'success');
-        updateAuthState();
+
+        if (state.tg && state.tg.initData) {
+            // Close after a short delay so they see the toast
+            setTimeout(() => state.tg.close(), 1500);
+        } else {
+            updateAuthState();
+        }
     } catch (error) { }
 });
 
@@ -108,12 +124,23 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     const password = document.getElementById('signup-password').value;
 
     try {
+        const body = { name, email };
+        if (state.tg && state.tg.initData) {
+            body.init_data = state.tg.initData;
+        }
+
         await apiFetch(`/auth/signup?password=${encodeURIComponent(password)}`, {
             method: 'POST',
-            body: JSON.stringify({ name, email })
+            body: JSON.stringify(body)
         });
-        showToast('Account created! Please login.', 'success');
-        toggleAuthMode();
+        showToast('Account created! Linking Telegram...', 'success');
+
+        if (state.tg && state.tg.initData) {
+            // Close after a short delay so they see the toast
+            setTimeout(() => state.tg.close(), 1500);
+        } else {
+            toggleAuthMode();
+        }
     } catch (error) { }
 });
 
@@ -294,7 +321,31 @@ function updateStats() {
 }
 
 // Init
-updateAuthState();
-if (state.token) {
-    loadRecords();
+async function initApp() {
+    if (state.tg && state.tg.initData && !state.token) {
+        try {
+            const data = await apiFetch('/auth/telegram/login', {
+                method: 'POST',
+                // Endpoint expects init_data as query param or body? 
+                // Router says: def telegram_login(init_data: str, ...) -> This is a query param by default in FastAPI if not typed as Pydantic model
+                // Wait, it should be query param. Let's check router again.
+                body: JSON.stringify({ init_data: state.tg.initData })
+            });
+            if (data && data.access_token) {
+                state.token = data.access_token;
+                localStorage.setItem('token', state.token);
+                state.tg.close();
+                return;
+            }
+        } catch (error) {
+            console.log("Auto-login failed:", error);
+        }
+    }
+
+    updateAuthState();
+    if (state.token) {
+        loadRecords();
+    }
 }
+
+initApp();

@@ -10,7 +10,5 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH=/code
 
 COPY . /code
-RUN chmod +x /code/entrypoint.sh
 
-ENTRYPOINT ["/code/entrypoint.sh"]
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]

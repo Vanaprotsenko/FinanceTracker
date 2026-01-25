@@ -18,6 +18,7 @@ class UpdateUser(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr
     name: str
+    init_data: str | None = None
 
     class Config:
         orm_mode = True
@@ -32,3 +33,4 @@ class Token(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    init_data: str | None = None

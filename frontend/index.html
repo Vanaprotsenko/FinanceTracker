@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinanceTracker - Manage Your Wealth</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body class="dark-theme">
     <div id="app">
         <!-- Navigation -->
@@ -31,7 +34,7 @@
                             <h1 id="auth-title">Welcome Back</h1>
                             <p id="auth-subtitle">Login to track your finances</p>
                         </div>
-                        
+
                         <div id="login-form-container">
                             <form id="login-form">
                                 <div class="form-group">
@@ -75,7 +78,7 @@
                     <h2>Your Records</h2>
                     <button id="add-record-btn" class="btn primary-btn">+ Add Record</button>
                 </div>
-                
+
                 <div class="records-container glass">
                     <table id="records-table">
                         <thead>
@@ -177,4 +180,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>
