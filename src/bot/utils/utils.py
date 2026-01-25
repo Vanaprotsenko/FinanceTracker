@@ -1,4 +1,5 @@
 import os
+import re
 import hmac
 import hashlib
 from urllib.parse import parse_qsl
@@ -36,3 +37,39 @@ def verify_telegram_init_data(init_data: str) -> dict:
         raise ValueError("Telegram auth expired")
 
     return data
+
+def extract_data_from_messages(text: str) -> dict:
+    # Pattern: [amount] [description] [optional currency]
+    # Examples: 
+    # "100 Coffee" -> amount=100, description=Coffee, currency=USD
+    # "50.5 Taxi EUR" -> amount=50.5, description=Taxi, currency=EUR
+    data = {"amount": 0.0, "description": "Unknown", "currency": "USD"}
+    
+    parts = text.split()
+    if not parts:
+        return {}
+
+    try:
+        # Try to find amount (first numeric-ish part)
+        for i, part in enumerate(parts):
+            clean_part = part.replace(',', '.')
+            if re.match(r"^\d+(\.\d+)?$", clean_part):
+                data["amount"] = float(clean_part)
+                
+                # Assume next part is description
+                if i + 1 < len(parts):
+                    data["description"] = parts[i+1]
+                
+                # Assume part after that is currency (if 3 letters)
+                if i + 2 < len(parts):
+                    potential_currency = parts[i+2].upper()
+                    if len(potential_currency) == 3:
+                        data["currency"] = potential_currency
+                
+                return data
+                
+        # Fallback if no clear numeric part found
+        return {}
+    except Exception:
+        return {}
+

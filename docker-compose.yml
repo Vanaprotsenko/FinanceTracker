@@ -7,6 +7,8 @@ services:
       - 8000:80
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/db
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
@@ -16,8 +18,13 @@ services:
       context: ./
       dockerfile: Dockerfile
     command: python /code/src/bot/bot.py
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/db
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:16-alpine

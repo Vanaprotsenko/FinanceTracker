@@ -4,7 +4,6 @@ from pydantic import BaseModel
 class RecordBase(BaseModel):
     amount: float
     currency: str
-    type: str
     description: str
 
 class RecordCreate(RecordBase):

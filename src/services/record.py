@@ -13,7 +13,6 @@ class RecordService:
             id=uuid.uuid4(),
             user_id=user_id,
             amount=data.amount,
-            type=data.type,
             description=data.description,
             currency=data.currency,
         )

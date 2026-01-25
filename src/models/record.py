@@ -9,7 +9,6 @@ class Record(Base):
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID, ForeignKey('users.id'))
     amount = Column(Float)
-    type = Column(String)
     description = Column(String)
     currency = Column(String)
 
