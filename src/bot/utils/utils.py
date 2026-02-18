@@ -53,7 +53,7 @@ def extract_data_from_messages(text: str) -> dict:
         # Try to find amount (first numeric-ish part)
         for i, part in enumerate(parts):
             clean_part = part.replace(',', '.')
-            if re.match(r"^\d+(\.\d+)?$", clean_part):
+            if re.match(r"^-?\d+(\.\d+)?$", clean_part):
                 data["amount"] = float(clean_part)
                 
                 # Assume next part is description

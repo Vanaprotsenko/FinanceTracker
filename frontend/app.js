@@ -1,351 +1,475 @@
-const API_URL = ''; // Same origin as the static files when served from FastAPI
+// ============================================
+// FinanceTracker — Alpine.js Application
+// ============================================
 
-// State management
-const state = {
-    token: localStorage.getItem('token'),
-    view: 'dashboard',
-    records: [],
-    tg: window.Telegram ? window.Telegram.WebApp : null
+const API_URL = ''; // Same origin — served from FastAPI
+
+// Exchange rates to EUR (base currency for mixed-currency stats)
+const EXCHANGE_RATES = {
+    EUR: 1,
+    USD: 0.92,      // 1 USD ≈ 0.92 EUR
+    UAH: 0.01944    // 1 UAH ≈ 0.01944 EUR (51.45 UAH per EUR)
 };
 
-if (state.tg) {
-    state.tg.expand();
-}
+document.addEventListener('alpine:init', () => {
+    Alpine.data('app', () => ({
 
-// DOM Elements
-const authSection = document.getElementById('auth-section');
-const dashboardSection = document.getElementById('dashboard-section');
-const statsSection = document.getElementById('stats-section');
-const mainNav = document.getElementById('main-nav');
-const loginFormContainer = document.getElementById('login-form-container');
-const signupFormContainer = document.getElementById('signup-form-container');
-const recordsBody = document.getElementById('records-body');
-const recordModal = document.getElementById('record-modal');
-const recordForm = document.getElementById('record-form');
-const toastContainer = document.getElementById('toast-container');
+        // --- Auth State ---
+        token: localStorage.getItem('token'),
+        authMode: 'login',
+        authLoading: false,
+        loginEmail: '',
+        loginPassword: '',
+        signupName: '',
+        signupEmail: '',
+        signupPassword: '',
 
-// View management
-function showView(viewName) {
-    state.view = viewName;
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        // --- App State ---
+        view: 'dashboard',
+        records: [],
+        loading: false,
+        filter: 'all',
 
-    if (viewName === 'dashboard') {
-        dashboardSection.classList.remove('hidden');
-        document.querySelector('[data-view="dashboard"]').classList.add('active');
-        loadRecords();
-    } else if (viewName === 'stats') {
-        statsSection.classList.remove('hidden');
-        document.querySelector('[data-view="stats"]').classList.add('active');
-        updateStats();
-    }
-}
-
-function updateAuthState() {
-    if (state.token) {
-        authSection.classList.add('hidden');
-        mainNav.classList.remove('hidden');
-        showView('dashboard');
-    } else {
-        authSection.classList.remove('hidden');
-        mainNav.classList.add('hidden');
-    }
-}
-
-// Toast Notifications
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// API Calls
-async function apiFetch(endpoint, options = {}) {
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
-    };
-
-    try {
-        const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
-        if (response.status === 401) {
-            logout();
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'API Error');
-        }
-        return response.status !== 204 ? await response.json() : null;
-    } catch (error) {
-        showToast(error.message, 'danger');
-        throw error;
-    }
-}
-
-// Auth Handlers
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-
-    try {
-        const body = { email, password };
-        if (state.tg && state.tg.initData) {
-            body.init_data = state.tg.initData;
-        }
-
-        const data = await apiFetch('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify(body)
-        });
-        state.token = data.access_token;
-        localStorage.setItem('token', state.token);
-        showToast('Logged in successfully', 'success');
-
-        if (state.tg && state.tg.initData) {
-            // Close after a short delay so they see the toast
-            setTimeout(() => state.tg.close(), 1500);
-        } else {
-            updateAuthState();
-        }
-    } catch (error) { }
-});
-
-document.getElementById('signup-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('signup-name').value;
-    const email = document.getElementById('signup-email').value;
-    const password = document.getElementById('signup-password').value;
-
-    try {
-        const body = { name, email };
-        if (state.tg && state.tg.initData) {
-            body.init_data = state.tg.initData;
-        }
-
-        await apiFetch(`/auth/signup?password=${encodeURIComponent(password)}`, {
-            method: 'POST',
-            body: JSON.stringify(body)
-        });
-        showToast('Account created! Linking Telegram...', 'success');
-
-        if (state.tg && state.tg.initData) {
-            // Close after a short delay so they see the toast
-            setTimeout(() => state.tg.close(), 1500);
-        } else {
-            toggleAuthMode();
-        }
-    } catch (error) { }
-});
-
-function logout() {
-    state.token = null;
-    localStorage.removeItem('token');
-    updateAuthState();
-}
-
-document.getElementById('logout-btn').addEventListener('click', logout);
-
-// View Switchers
-document.getElementById('switch-to-signup').addEventListener('click', toggleAuthMode);
-document.getElementById('switch-to-login').addEventListener('click', toggleAuthMode);
-
-function toggleAuthMode() {
-    loginFormContainer.classList.toggle('hidden');
-    signupFormContainer.classList.toggle('hidden');
-    const title = document.getElementById('auth-title');
-    const sub = document.getElementById('auth-subtitle');
-    if (loginFormContainer.classList.contains('hidden')) {
-        title.textContent = 'Join Us';
-        sub.textContent = 'Create an account to start tracking';
-    } else {
-        title.textContent = 'Welcome Back';
-        sub.textContent = 'Login to track your finances';
-    }
-}
-
-document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
-    btn.addEventListener('click', () => showView(btn.dataset.view));
-});
-
-// Record Handlers
-async function loadRecords() {
-    try {
-        const records = await apiFetch('/records/');
-        state.records = records;
-        renderRecords();
-    } catch (error) { }
-}
-
-function renderRecords() {
-    recordsBody.innerHTML = '';
-    if (state.records.length === 0) {
-        document.getElementById('no-records').classList.remove('hidden');
-        return;
-    }
-    document.getElementById('no-records').classList.add('hidden');
-
-    state.records.forEach(record => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${new Date().toLocaleDateString()}</td>
-            <td>${record.description}</td>
-            <td><span class="record-type-badge type-${record.type}">${record.type}</span></td>
-            <td>${record.amount.toFixed(2)}</td>
-            <td>${record.currency}</td>
-            <td class="actions-btns">
-                <button class="icon-btn edit-btn" onclick="editRecord('${record.id}')">✎</button>
-                <button class="icon-btn delete-btn" onclick="deleteRecord('${record.id}')">🗑</button>
-            </td>
-        `;
-        recordsBody.appendChild(tr);
-    });
-}
-
-// Modal Handlers
-document.getElementById('add-record-btn').addEventListener('click', () => {
-    document.getElementById('modal-title').textContent = 'Add New Record';
-    recordForm.reset();
-    document.getElementById('record-id').value = '';
-    recordModal.classList.remove('hidden');
-});
-
-document.querySelector('.close-modal').addEventListener('click', () => {
-    recordModal.classList.add('hidden');
-});
-
-recordForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('record-id').value;
-    const data = {
-        description: document.getElementById('record-description').value,
-        amount: parseFloat(document.getElementById('record-amount').value),
-        currency: document.getElementById('record-currency').value,
-        type: document.getElementById('record-type').value
-    };
-
-    try {
-        if (id) {
-            // Update - Backend expects amount, type, description, currency as params? 
-            // Router: async def update_record(record_id: uuid.UUID, amount: float, type: str, description: str, currency: str, ...)
-            // These are query params.
-            const params = new URLSearchParams(data).toString();
-            await apiFetch(`/records/${id}?${params}`, { method: 'PATCH' });
-            showToast('Record updated', 'success');
-        } else {
-            // Create
-            await apiFetch('/records/', {
-                method: 'POST',
-                body: JSON.stringify(data)
-            });
-            showToast('Record added', 'success');
-        }
-        recordModal.classList.add('hidden');
-        loadRecords();
-    } catch (error) { }
-});
-
-async function deleteRecord(id) {
-    if (confirm('Are you sure you want to delete this record?')) {
-        try {
-            await apiFetch(`/records/${id}`, { method: 'DELETE' });
-            showToast('Record deleted', 'success');
-            loadRecords();
-        } catch (error) { }
-    }
-}
-
-window.editRecord = (id) => {
-    const record = state.records.find(r => r.id === id);
-    if (!record) return;
-
-    document.getElementById('modal-title').textContent = 'Edit Record';
-    document.getElementById('record-id').value = record.id;
-    document.getElementById('record-description').value = record.description;
-    document.getElementById('record-amount').value = record.amount;
-    document.getElementById('record-currency').value = record.currency;
-    document.getElementById('record-type').value = record.type;
-
-    recordModal.classList.remove('hidden');
-};
-
-// Statistics
-let statsChart = null;
-
-function updateStats() {
-    const income = state.records
-        .filter(r => r.type === 'income')
-        .reduce((sum, r) => sum + r.amount, 0);
-    const expense = state.records
-        .filter(r => r.type === 'expense')
-        .reduce((sum, r) => sum + r.amount, 0);
-
-    document.getElementById('total-income').textContent = `$${income.toFixed(2)}`;
-    document.getElementById('total-expense').textContent = `$${expense.toFixed(2)}`;
-    document.getElementById('net-balance').textContent = `$${(income - expense).toFixed(2)}`;
-
-    const ctx = document.getElementById('incomeExpenseChart').getContext('2d');
-
-    if (statsChart) {
-        statsChart.destroy();
-    }
-
-    statsChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Income', 'Expenses'],
-            datasets: [{
-                data: [income, expense],
-                backgroundColor: ['#10b981', '#ef4444'],
-                borderWidth: 0
-            }]
+        // --- Modal State ---
+        showModal: false,
+        editingId: null,
+        saving: false,
+        form: {
+            description: '',
+            amount: '',
+            currency: 'UAH',
+            type: 'expense'
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#94a3b8' }
-                }
-            },
-            cutout: '70%'
-        }
-    });
-}
 
-// Init
-async function initApp() {
-    if (state.tg && state.tg.initData && !state.token) {
-        try {
-            const data = await apiFetch('/auth/telegram/login', {
-                method: 'POST',
-                // Endpoint expects init_data as query param or body? 
-                // Router says: def telegram_login(init_data: str, ...) -> This is a query param by default in FastAPI if not typed as Pydantic model
-                // Wait, it should be query param. Let's check router again.
-                body: JSON.stringify({ init_data: state.tg.initData })
-            });
-            if (data && data.access_token) {
-                state.token = data.access_token;
-                localStorage.setItem('token', state.token);
-                state.tg.close();
+        // --- Telegram ---
+        tg: window.Telegram ? window.Telegram.WebApp : null,
+
+        // --- Charts ---
+        doughnutChart: null,
+        trendChart: null,
+
+        // --- Computed ---
+        get filteredRecords() {
+            if (this.filter === 'income') return this.records.filter(r => r.amount >= 0);
+            if (this.filter === 'expense') return this.records.filter(r => r.amount < 0);
+            return this.records;
+        },
+
+        // Detect if all records use the same currency
+        get statsCurrency() {
+            if (this.records.length === 0) return 'USD';
+            const currencies = [...new Set(this.records.map(r => r.currency))];
+            return currencies.length === 1 ? currencies[0] : 'EUR';
+        },
+
+        get isMixedCurrency() {
+            const currencies = [...new Set(this.records.map(r => r.currency))];
+            return currencies.length > 1;
+        },
+
+        // Convert amount to the stats currency
+        convertToStatsCurrency(amount, fromCurrency) {
+            const target = this.statsCurrency;
+            if (fromCurrency === target) return amount;
+            // Convert via EUR as intermediary
+            const inEur = amount * (EXCHANGE_RATES[fromCurrency] || 1);
+            if (target === 'EUR') return inEur;
+            return inEur / (EXCHANGE_RATES[target] || 1);
+        },
+
+        get totalIncome() {
+            return this.records
+                .filter(r => r.amount > 0)
+                .reduce((s, r) => s + this.convertToStatsCurrency(r.amount, r.currency), 0);
+        },
+
+        get totalExpense() {
+            return Math.abs(this.records
+                .filter(r => r.amount < 0)
+                .reduce((s, r) => s + this.convertToStatsCurrency(r.amount, r.currency), 0));
+        },
+
+        get netBalance() {
+            return this.totalIncome - this.totalExpense;
+        },
+
+        // === INIT ===
+        async init() {
+            if (this.tg) this.tg.expand();
+
+            // Try Telegram auto-login
+            if (this.tg && this.tg.initData && !this.token) {
+                try {
+                    const data = await this.apiFetch('/auth/telegram/login', {
+                        method: 'POST',
+                        body: JSON.stringify({ init_data: this.tg.initData })
+                    });
+                    if (data && data.access_token) {
+                        this.token = data.access_token;
+                        localStorage.setItem('token', this.token);
+                        this.tg.close();
+                        return;
+                    }
+                } catch (e) {
+                    console.log('Telegram auto-login failed:', e);
+                }
+            }
+
+            if (this.token) {
+                await this.loadRecords();
+            }
+        },
+
+        // === API ===
+        async apiFetch(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+            };
+
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+                if (response.status === 401) {
+                    this.logout();
+                    throw new Error('Session expired');
+                }
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Something went wrong');
+                }
+                return response.status !== 204 ? await response.json() : null;
+            } catch (error) {
+                this.showToast(error.message, 'danger');
+                throw error;
+            }
+        },
+
+        // === AUTH ===
+        async handleLogin() {
+            this.authLoading = true;
+            try {
+                const body = { email: this.loginEmail, password: this.loginPassword };
+                if (this.tg && this.tg.initData) body.init_data = this.tg.initData;
+
+                const data = await this.apiFetch('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+
+                this.token = data.access_token;
+                localStorage.setItem('token', this.token);
+                this.showToast('Logged in successfully', 'success');
+
+                if (this.tg && this.tg.initData) {
+                    setTimeout(() => this.tg.close(), 1500);
+                } else {
+                    await this.loadRecords();
+                }
+            } catch (e) { }
+            finally { this.authLoading = false; }
+        },
+
+        async handleSignup() {
+            this.authLoading = true;
+            try {
+                const body = { name: this.signupName, email: this.signupEmail };
+                if (this.tg && this.tg.initData) body.init_data = this.tg.initData;
+
+                await this.apiFetch(`/auth/signup?password=${encodeURIComponent(this.signupPassword)}`, {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+
+                this.showToast('Account created! Please login.', 'success');
+
+                if (this.tg && this.tg.initData) {
+                    setTimeout(() => this.tg.close(), 1500);
+                } else {
+                    this.authMode = 'login';
+                }
+            } catch (e) { }
+            finally { this.authLoading = false; }
+        },
+
+        logout() {
+            this.token = null;
+            this.records = [];
+            localStorage.removeItem('token');
+            this.view = 'dashboard';
+        },
+
+        // === VIEWS ===
+        showView(name) {
+            this.view = name;
+            if (name === 'dashboard') this.loadRecords();
+            if (name === 'stats') this.$nextTick(() => this.renderCharts());
+        },
+
+        // === RECORDS ===
+        async loadRecords() {
+            this.loading = true;
+            try {
+                const data = await this.apiFetch('/records/');
+                // Force Alpine reactivity by replacing the array
+                this.records = [];
+                this.$nextTick(() => {
+                    this.records = data || [];
+                });
+            } catch (e) { }
+            finally { this.loading = false; }
+        },
+
+        openAddModal() {
+            this.editingId = null;
+            this.form = { description: '', amount: '', currency: 'UAH', type: 'expense' };
+            this.showModal = true;
+        },
+
+        openEditModal(record) {
+            this.editingId = record.id;
+            this.form = {
+                description: record.description,
+                amount: Math.abs(record.amount),
+                currency: record.currency,
+                type: record.amount >= 0 ? 'income' : 'expense'
+            };
+            this.showModal = true;
+        },
+
+        async saveRecord() {
+            const rawAmount = parseFloat(this.form.amount);
+            if (!rawAmount || rawAmount <= 0) {
+                this.showToast('Please enter a valid amount', 'danger');
                 return;
             }
-        } catch (error) {
-            console.log("Auto-login failed:", error);
+
+            this.saving = true;
+            const amount = this.form.type === 'expense'
+                ? -Math.abs(rawAmount)
+                : Math.abs(rawAmount);
+            const type = this.form.type;
+
+            try {
+                if (this.editingId) {
+                    const params = new URLSearchParams({
+                        amount,
+                        type,
+                        description: this.form.description,
+                        currency: this.form.currency
+                    }).toString();
+                    await this.apiFetch(`/records/${this.editingId}?${params}`, { method: 'PATCH' });
+                    this.showToast('Record updated', 'success');
+                } else {
+                    await this.apiFetch('/records/', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            description: this.form.description,
+                            amount,
+                            type,
+                            currency: this.form.currency
+                        })
+                    });
+                    this.showToast('Record added', 'success');
+                }
+                this.showModal = false;
+                await this.loadRecords();
+            } catch (e) { }
+            finally { this.saving = false; }
+        },
+
+        async deleteRecord(id) {
+            if (!confirm('Delete this record?')) return;
+            try {
+                await this.apiFetch(`/records/${id}`, { method: 'DELETE' });
+                this.showToast('Record deleted', 'success');
+                await this.loadRecords();
+            } catch (e) { }
+        },
+
+        // === FORMATTING ===
+        formatAmount(amount) {
+            const sign = amount >= 0 ? '+' : '';
+            return sign + amount.toFixed(2);
+        },
+
+        getCurrencySymbol(code) {
+            const symbols = { USD: '$', EUR: '€', UAH: '₴' };
+            return symbols[code] || code;
+        },
+
+        formatStatsCurrency(value) {
+            const sym = this.getCurrencySymbol(this.statsCurrency);
+            return sym + value.toFixed(2);
+        },
+
+        formatDate(record) {
+            const date = record.created_at ? new Date(record.created_at) : new Date();
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        },
+
+        // === CHARTS ===
+        renderCharts() {
+            this.renderDoughnutChart();
+            this.renderTrendChart();
+        },
+
+        renderDoughnutChart() {
+            const ctx = document.getElementById('incomeExpenseChart');
+            if (!ctx) return;
+
+            if (this.doughnutChart) this.doughnutChart.destroy();
+
+            const income = this.totalIncome;
+            const expense = this.totalExpense;
+            const hasData = income > 0 || expense > 0;
+            const sym = this.getCurrencySymbol(this.statsCurrency);
+
+            this.doughnutChart = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Income', 'Expenses'],
+                    datasets: [{
+                        data: hasData ? [income, expense] : [1, 1],
+                        backgroundColor: hasData
+                            ? ['rgba(52, 211, 153, 0.8)', 'rgba(248, 113, 113, 0.8)']
+                            : ['rgba(100,100,100,0.2)', 'rgba(100,100,100,0.2)'],
+                        borderWidth: 0,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#94a3b8',
+                                padding: 16,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { family: 'Outfit', size: 13 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.label}: ${sym}${ctx.raw.toFixed(2)}`
+                            }
+                        }
+                    }
+                }
+            });
+        },
+
+        renderTrendChart() {
+            const ctx = document.getElementById('monthlyTrendChart');
+            if (!ctx) return;
+
+            if (this.trendChart) this.trendChart.destroy();
+
+            const months = {};
+            const now = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const key = d.toLocaleDateString('en-US', { month: 'short' });
+                months[key] = { income: 0, expense: 0 };
+            }
+
+            this.records.forEach(r => {
+                const date = r.created_at ? new Date(r.created_at) : new Date();
+                const key = date.toLocaleDateString('en-US', { month: 'short' });
+                if (months[key]) {
+                    const converted = this.convertToStatsCurrency(Math.abs(r.amount), r.currency);
+                    if (r.amount >= 0) months[key].income += converted;
+                    else months[key].expense += converted;
+                }
+            });
+
+            const labels = Object.keys(months);
+            const incomeData = labels.map(k => months[k].income);
+            const expenseData = labels.map(k => months[k].expense);
+            const sym = this.getCurrencySymbol(this.statsCurrency);
+
+            this.trendChart = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: incomeData,
+                            backgroundColor: 'rgba(52, 211, 153, 0.6)',
+                            borderRadius: 6,
+                            borderSkipped: false,
+                            barPercentage: 0.6
+                        },
+                        {
+                            label: 'Expenses',
+                            data: expenseData,
+                            backgroundColor: 'rgba(248, 113, 113, 0.6)',
+                            borderRadius: 6,
+                            borderSkipped: false,
+                            barPercentage: 0.6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#64748b',
+                                font: { family: 'Outfit', size: 12 }
+                            }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#64748b',
+                                font: { family: 'Outfit', size: 12 },
+                                callback: (val) => sym + val
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#94a3b8',
+                                padding: 16,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { family: 'Outfit', size: 13 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.dataset.label}: ${sym}${ctx.raw.toFixed(2)}`
+                            }
+                        }
+                    }
+                }
+            });
+        },
+
+        // === TOAST (centered) ===
+        showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            const icons = { success: '✓', danger: '✕', info: 'ℹ' };
+            toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span>${message}`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
         }
-    }
-
-    updateAuthState();
-    if (state.token) {
-        loadRecords();
-    }
-}
-
-initApp();
+    }));
+});

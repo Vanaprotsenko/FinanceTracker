@@ -4,108 +4,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanceTracker - Manage Your Wealth</title>
+    <title>FinanceTracker — Manage Your Wealth</title>
+    <meta name="description"
+        content="Track your income and expenses with FinanceTracker. Beautiful, fast, and easy to use.">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 </head>
 
-<body class="dark-theme">
+<body x-data="app" x-init="init()">
     <div id="app">
         <!-- Navigation -->
-        <nav id="main-nav" class="hidden">
+        <nav x-show="token" x-transition.opacity.duration.300ms>
             <div class="nav-container">
                 <div class="logo">Finance<span>Tracker</span></div>
                 <div class="nav-links">
-                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-                    <button class="nav-btn" data-view="stats">Statistics</button>
-                    <button id="logout-btn" class="nav-btn logout">Logout</button>
+                    <button class="nav-btn" :class="{ active: view === 'dashboard' }"
+                        @click="showView('dashboard')">Dashboard</button>
+                    <button class="nav-btn" :class="{ active: view === 'stats' }"
+                        @click="showView('stats')">Statistics</button>
+                    <button class="nav-btn logout" @click="logout()">Logout</button>
                 </div>
             </div>
         </nav>
 
-        <main id="content">
-            <!-- Auth Landing Section -->
-            <section id="auth-section" class="view">
+        <main>
+            <!-- Auth Section -->
+            <section x-show="!token" x-transition.opacity.duration.400ms>
                 <div class="auth-container">
                     <div class="auth-card glass">
                         <div class="auth-header">
-                            <h1 id="auth-title">Welcome Back</h1>
-                            <p id="auth-subtitle">Login to track your finances</p>
+                            <h1 x-text="authMode === 'login' ? 'Welcome Back' : 'Join Us'"></h1>
+                            <p
+                                x-text="authMode === 'login' ? 'Login to track your finances' : 'Create an account to start tracking'">
+                            </p>
                         </div>
 
-                        <div id="login-form-container">
-                            <form id="login-form">
+                        <!-- Login Form -->
+                        <div x-show="authMode === 'login'" x-transition.opacity>
+                            <form @submit.prevent="handleLogin()" id="login-form">
                                 <div class="form-group">
                                     <label for="login-email">Email</label>
-                                    <input type="email" id="login-email" placeholder="name@example.com" required>
+                                    <input type="email" id="login-email" x-model="loginEmail"
+                                        placeholder="name@example.com" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="login-password">Password</label>
-                                    <input type="password" id="login-password" placeholder="••••••••" required>
+                                    <input type="password" id="login-password" x-model="loginPassword"
+                                        placeholder="••••••••" required>
                                 </div>
-                                <button type="submit" class="btn primary-btn">Login</button>
+                                <button type="submit" class="btn primary-btn" :disabled="authLoading">
+                                    <span x-text="authLoading ? 'Logging in...' : 'Login'"></span>
+                                </button>
                             </form>
-                            <p class="auth-footer">Don't have an account? <span id="switch-to-signup">Sign Up</span></p>
+                            <p class="auth-footer">Don't have an account?
+                                <span @click="authMode = 'signup'">Sign Up</span>
+                            </p>
                         </div>
 
-                        <div id="signup-form-container" class="hidden">
-                            <form id="signup-form">
+                        <!-- Signup Form -->
+                        <div x-show="authMode === 'signup'" x-transition.opacity>
+                            <form @submit.prevent="handleSignup()" id="signup-form">
                                 <div class="form-group">
                                     <label for="signup-name">Full Name</label>
-                                    <input type="text" id="signup-name" placeholder="John Doe" required>
+                                    <input type="text" id="signup-name" x-model="signupName" placeholder="John Doe"
+                                        required>
                                 </div>
                                 <div class="form-group">
                                     <label for="signup-email">Email</label>
-                                    <input type="email" id="signup-email" placeholder="name@example.com" required>
+                                    <input type="email" id="signup-email" x-model="signupEmail"
+                                        placeholder="name@example.com" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="signup-password">Password</label>
-                                    <input type="password" id="signup-password" placeholder="••••••••" required>
+                                    <input type="password" id="signup-password" x-model="signupPassword"
+                                        placeholder="••••••••" required>
                                 </div>
-                                <button type="submit" class="btn primary-btn">Sign Up</button>
+                                <button type="submit" class="btn primary-btn" :disabled="authLoading">
+                                    <span x-text="authLoading ? 'Creating...' : 'Sign Up'"></span>
+                                </button>
                             </form>
-                            <p class="auth-footer">Already have an account? <span id="switch-to-login">Login</span></p>
+                            <p class="auth-footer">Already have an account?
+                                <span @click="authMode = 'login'">Login</span>
+                            </p>
                         </div>
                     </div>
                 </div>
             </section>
 
             <!-- Dashboard Section -->
-            <section id="dashboard-section" class="view hidden">
+            <section x-show="token && view === 'dashboard'" x-transition.opacity.duration.300ms>
                 <div class="dashboard-header">
                     <h2>Your Records</h2>
-                    <button id="add-record-btn" class="btn primary-btn">+ Add Record</button>
+                    <button class="btn primary-btn" @click="openAddModal()">+ Add Record</button>
                 </div>
 
-                <div class="records-container glass">
-                    <table id="records-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Currency</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="records-body">
-                            <!-- Records will be injected here -->
-                        </tbody>
-                    </table>
-                    <div id="no-records" class="hidden">
-                        <p>No records found. Start by adding one!</p>
-                    </div>
+                <!-- Filter Bar -->
+                <div class="filter-bar">
+                    <button class="filter-btn" :class="{ active: filter === 'all' }"
+                        @click="filter = 'all'">All</button>
+                    <button class="filter-btn" :class="{ active: filter === 'income' }"
+                        @click="filter = 'income'">Income</button>
+                    <button class="filter-btn" :class="{ active: filter === 'expense' }"
+                        @click="filter = 'expense'">Expenses</button>
+                </div>
+
+                <!-- Skeleton Loading -->
+                <div x-show="loading">
+                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton skeleton-card"></div>
+                </div>
+
+                <!-- Records List -->
+                <div x-show="!loading" class="records-grid">
+                    <template x-for="(record, idx) in filteredRecords" :key="record.id">
+                        <div class="record-card" :class="record.amount >= 0 ? 'income' : 'expense'"
+                            :style="'animation-delay:' + (idx * 0.05) + 's'">
+                            <div class="record-icon" x-text="record.amount >= 0 ? '↑' : '↓'"></div>
+                            <div class="record-info">
+                                <div class="record-description" x-text="record.description"></div>
+                                <div class="record-date" x-text="formatDate(record)"></div>
+                            </div>
+                            <div class="record-amount" :class="record.amount >= 0 ? 'positive' : 'negative'"
+                                x-text="formatAmount(record.amount)"></div>
+                            <div class="record-currency" x-text="record.currency"></div>
+                            <div class="record-actions">
+                                <button class="icon-btn edit-btn" @click="openEditModal(record)">✎</button>
+                                <button class="icon-btn delete-btn" @click="deleteRecord(record.id)">🗑</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Empty State -->
+                <div x-show="!loading && filteredRecords.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <h3 x-text="filter === 'all' ? 'No records yet' : 'No ' + filter + ' records'"></h3>
+                    <p>Start by adding your first record!</p>
                 </div>
             </section>
 
             <!-- Statistics Section -->
-            <section id="stats-section" class="view hidden">
+            <section x-show="token && view === 'stats'" x-transition.opacity.duration.300ms>
                 <div class="stats-header">
                     <h2>Financial Summary</h2>
                 </div>
+
+                <!-- Quick Stats Row -->
+                <div class="quick-stats" style="margin-bottom: 1.25rem;">
+                    <div class="quick-stat glass">
+                        <div class="quick-stat-value text-success" x-text="formatStatsCurrency(totalIncome)"></div>
+                        <div class="quick-stat-label">Total Income</div>
+                    </div>
+                    <div class="quick-stat glass">
+                        <div class="quick-stat-value text-danger" x-text="formatStatsCurrency(totalExpense)"></div>
+                        <div class="quick-stat-label">Total Expenses</div>
+                    </div>
+                    <div class="quick-stat glass">
+                        <div class="quick-stat-value" :class="netBalance >= 0 ? 'text-success' : 'text-danger'"
+                            x-text="formatStatsCurrency(netBalance)"></div>
+                        <div class="quick-stat-label">Net Balance</div>
+                    </div>
+                </div>
+                <p x-show="isMixedCurrency"
+                    style="text-align:center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">*
+                    Values converted to <span x-text="statsCurrency"></span> (mixed currencies detected)</p>
+
                 <div class="stats-grid">
                     <div class="stat-card glass">
                         <h3>Income vs Expenses</h3>
@@ -113,22 +180,10 @@
                             <canvas id="incomeExpenseChart"></canvas>
                         </div>
                     </div>
-                    <div class="stat-card glass summary-totals">
-                        <h3>Balance</h3>
-                        <div class="balance-display">
-                            <div class="total-item income">
-                                <span class="label">Total Income</span>
-                                <span id="total-income" class="value">$0.00</span>
-                            </div>
-                            <div class="total-item expense">
-                                <span class="label">Total Expenses</span>
-                                <span id="total-expense" class="value">$0.00</span>
-                            </div>
-                            <hr>
-                            <div class="total-item net">
-                                <span class="label">Net Balance</span>
-                                <span id="net-balance" class="value">$0.00</span>
-                            </div>
+                    <div class="stat-card glass">
+                        <h3>Monthly Trend</h3>
+                        <div class="chart-container">
+                            <canvas id="monthlyTrendChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -136,45 +191,52 @@
         </main>
 
         <!-- Record Modal -->
-        <div id="record-modal" class="modal hidden">
+        <div x-show="showModal" x-transition.opacity class="modal" @click.self="showModal = false">
             <div class="modal-content glass">
                 <div class="modal-header">
-                    <h2 id="modal-title">Add New Record</h2>
-                    <span class="close-modal">&times;</span>
+                    <h2 x-text="editingId ? 'Edit Record' : 'Add New Record'"></h2>
+                    <span class="close-modal" @click="showModal = false">&times;</span>
                 </div>
-                <form id="record-form">
-                    <input type="hidden" id="record-id">
+                <form @submit.prevent="saveRecord()">
                     <div class="form-group">
                         <label for="record-description">Description</label>
-                        <input type="text" id="record-description" placeholder="Lunch, Salary, Rent..." required>
+                        <input type="text" id="record-description" x-model="form.description"
+                            placeholder="Lunch, Salary, Rent..." required>
                     </div>
+
+                    <!-- Type Toggle -->
+                    <div class="type-toggle">
+                        <button type="button" class="type-toggle-btn"
+                            :class="{ 'active-income': form.type === 'income' }" @click="form.type = 'income'">↑
+                            Income</button>
+                        <button type="button" class="type-toggle-btn"
+                            :class="{ 'active-expense': form.type === 'expense' }" @click="form.type = 'expense'">↓
+                            Expense</button>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label for="record-amount">Amount</label>
-                            <input type="number" id="record-amount" step="0.01" placeholder="0.00" required>
+                            <input type="number" id="record-amount" x-model="form.amount" step="any" placeholder="0.00"
+                                required inputmode="decimal">
                         </div>
                         <div class="form-group">
                             <label for="record-currency">Currency</label>
-                            <select id="record-currency">
+                            <select id="record-currency" x-model="form.currency">
                                 <option value="USD">USD</option>
                                 <option value="EUR">EUR</option>
                                 <option value="UAH">UAH</option>
                             </select>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="record-type">Type</label>
-                        <select id="record-type">
-                            <option value="expense">Expense</option>
-                            <option value="income">Income</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn primary-btn">Save Record</button>
+                    <button type="submit" class="btn primary-btn" :disabled="saving">
+                        <span x-text="saving ? 'Saving...' : 'Save Record'"></span>
+                    </button>
                 </form>
             </div>
         </div>
 
-        <!-- Toast Notifications -->
+        <!-- Toast Container -->
         <div id="toast-container"></div>
     </div>
 

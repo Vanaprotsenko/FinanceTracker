@@ -1,8 +1,10 @@
 import uuid
+from typing import Optional
 from pydantic import BaseModel
 
 class RecordBase(BaseModel):
     amount: float
+    type: Optional[str] = "expense"
     currency: str
     description: str
 

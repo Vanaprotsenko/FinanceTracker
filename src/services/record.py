@@ -24,7 +24,7 @@ class RecordService:
     def read_records(self, record_id):
         return self.record_repository.read(record_id)
 
-    def update_record(self, record_id, user_id, amount, type, description, currency) -> Record:
+    def update_record(self, record_id, user_id, amount, description, currency) -> Record:
         record = self.record_repository.read(record_id)
 
         if not record:
@@ -32,7 +32,6 @@ class RecordService:
 
         record.user_id = user_id
         record.amount = amount
-        record.type = type
         record.description = description
         record.currency = currency
         

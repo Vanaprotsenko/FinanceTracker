@@ -1,14 +1,23 @@
-FROM python:3.10-slim
+    FROM python:3.11-slim
 
-WORKDIR /code
+    WORKDIR /code
 
-COPY requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+    RUN apt-get update \
+        && apt-get install -y --no-install-recommends postgresql-client \
+        && rm -rf /var/lib/apt/lists/*
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH=/code
+    COPY requirements.txt .
+    RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /code
+    ENV PYTHONDONTWRITEBYTECODE=1 \
+        PYTHONUNBUFFERED=1 \
+        PYTHONPATH=/code
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+    COPY . .
+
+    COPY scripts/run_migrations.sh /run_migrations.sh
+    RUN chmod +x /run_migrations.sh
+
+    ENTRYPOINT ["/run_migrations.sh"]
+
+    CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80"]

@@ -65,7 +65,6 @@ async def delete_record(
 async def update_record(
     record_id: uuid.UUID, 
     amount: float, 
-    type: str, 
     description: str, 
     currency: str, 
     user_id: uuid.UUID = Depends(get_current_user_id),
@@ -79,5 +78,6 @@ async def update_record(
     if not record or record.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
         
-    updated_record = service.update_record(record_id, user_id=user_id, amount=amount, type=type, description=description, currency=currency)
+    updated_record = service.update_record(record_id, user_id=user_id, amount=amount, description=description, currency=currency)
+
     return {"id": updated_record.id}
