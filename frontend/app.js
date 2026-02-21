@@ -32,6 +32,8 @@ document.addEventListener('alpine:init', () => {
 
         // --- Modal State ---
         showModal: false,
+        showMonoModal: false,
+        monoToken: '',
         editingId: null,
         saving: false,
         form: {
@@ -284,6 +286,35 @@ document.addEventListener('alpine:init', () => {
                 this.showToast('Record deleted', 'success');
                 await this.loadRecords();
             } catch (e) { }
+        },
+
+        connectMono() {
+            this.monoToken = '';
+            this.showMonoModal = true;
+        },
+
+        proceedToMono() {
+            window.open('https://api.monobank.ua/index.html', '_blank');
+        },
+
+        async saveMonoToken() {
+            if (!this.monoToken || !this.monoToken.trim()) {
+                this.showToast('Please enter a valid token', 'danger');
+                return;
+            }
+
+            try {
+                await this.apiFetch('/mono/savetoken/', {
+                    method: 'POST',
+                    body: JSON.stringify({ token: this.monoToken.trim() })
+                });
+
+                this.showToast('Monobank token saved successfully', 'success');
+                this.showMonoModal = false;
+            } catch (error) {
+                // The error message is handled by apiFetch which throws the .detail from backend
+                // or shows a default message
+            }
         },
 
         // === FORMATTING ===

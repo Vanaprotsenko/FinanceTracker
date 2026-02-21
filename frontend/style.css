@@ -373,6 +373,40 @@ select option {
     transform: translateY(0);
 }
 
+.secondary-btn {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.secondary-btn:active {
+    transform: translateY(0);
+}
+
+.mono-btn {
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.mono-btn:hover {
+    background: #1a1a1a;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.mono-btn:active {
+    transform: translateY(0);
+}
+
 /* === MAIN CONTENT === */
 main {
     max-width: 1100px;
