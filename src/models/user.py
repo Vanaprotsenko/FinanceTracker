@@ -14,3 +14,4 @@ class User(Base):
     telegram_id = Column(String, unique=True, nullable=True)
     telegram_username = Column(String, unique=True, nullable=True)
     password = Column(String, nullable=False)
+    mono_token = Column(String, nullable=True)

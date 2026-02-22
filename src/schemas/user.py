@@ -34,3 +34,11 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
     init_data: str | None = None
+
+
+class UserSaveMonoToken(BaseModel):
+    mono_token: str
+
+
+class UserResponseMonoToken(BaseModel):
+    response: str

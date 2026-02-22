@@ -14,7 +14,6 @@ const EXCHANGE_RATES = {
 document.addEventListener('alpine:init', () => {
     Alpine.data('app', () => ({
 
-        // --- Auth State ---
         token: localStorage.getItem('token'),
         authMode: 'login',
         authLoading: false,
@@ -43,14 +42,11 @@ document.addEventListener('alpine:init', () => {
             type: 'expense'
         },
 
-        // --- Telegram ---
         tg: window.Telegram ? window.Telegram.WebApp : null,
 
-        // --- Charts ---
         doughnutChart: null,
         trendChart: null,
 
-        // --- Computed ---
         get filteredRecords() {
             if (this.filter === 'income') return this.records.filter(r => r.amount >= 0);
             if (this.filter === 'expense') return this.records.filter(r => r.amount < 0);
@@ -95,7 +91,6 @@ document.addEventListener('alpine:init', () => {
             return this.totalIncome - this.totalExpense;
         },
 
-        // === INIT ===
         async init() {
             if (this.tg) this.tg.expand();
 
@@ -182,11 +177,28 @@ document.addEventListener('alpine:init', () => {
                     body: JSON.stringify(body)
                 });
 
-                this.showToast('Account created! Please login.', 'success');
+                this.showToast('Account created! Logging you in...', 'success');
 
-                if (this.tg && this.tg.initData) {
-                    setTimeout(() => this.tg.close(), 1500);
-                } else {
+                try {
+                    const loginBody = { email: this.signupEmail, password: this.signupPassword };
+                    if (this.tg && this.tg.initData) loginBody.init_data = this.tg.initData;
+                    const loginData = await this.apiFetch('/auth/login', {
+                        method: 'POST',
+                        body: JSON.stringify(loginBody)
+                    });
+
+                    this.token = loginData.access_token;
+                    localStorage.setItem('token', this.token);
+
+                    if (this.tg && this.tg.initData) {
+                        setTimeout(() => this.tg.close(), 1500);
+                    } else {
+                        await this.loadRecords();
+                    }
+                } catch (loginErr) {
+                    // If auto-login fails, pre-fill login form so user can retry
+                    this.loginEmail = this.signupEmail;
+                    this.loginPassword = this.signupPassword;
                     this.authMode = 'login';
                 }
             } catch (e) { }
@@ -304,20 +316,17 @@ document.addEventListener('alpine:init', () => {
             }
 
             try {
-                await this.apiFetch('/mono/savetoken/', {
+                await this.apiFetch('/auth/mono/savetoken', {
                     method: 'POST',
-                    body: JSON.stringify({ token: this.monoToken.trim() })
+                    body: JSON.stringify({ mono_token: this.monoToken.trim() })
                 });
 
                 this.showToast('Monobank token saved successfully', 'success');
                 this.showMonoModal = false;
             } catch (error) {
-                // The error message is handled by apiFetch which throws the .detail from backend
-                // or shows a default message
             }
         },
 
-        // === FORMATTING ===
         formatAmount(amount) {
             const sign = amount >= 0 ? '+' : '';
             return sign + amount.toFixed(2);
@@ -338,7 +347,6 @@ document.addEventListener('alpine:init', () => {
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         },
 
-        // === CHARTS ===
         renderCharts() {
             this.renderDoughnutChart();
             this.renderTrendChart();
@@ -486,7 +494,6 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        // === TOAST (centered) ===
         showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
