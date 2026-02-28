@@ -80,4 +80,20 @@ async def get_cards_info(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@router.delete("/delete-mono-card", response_model=UserResponseMonoToken)
+async def delete_mono_card(
+        card_id: str,
+        session: Session = Depends(get_db),
+        user_id: UUID = Depends(get_current_user_id)
+):
+    try:
+        repository = UserRepository(session)
+        mono_repository = MonoRepository(session)
+        service = MonoService(repository, mono_repository)
+
+        service.delete_card(card_id)
+        return UserResponseMonoToken(response=f"The card with id: {card_id} was successfully deleted")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 

@@ -49,15 +49,12 @@ class MonoService:
 
     def verify_token(self, user_id):
         user = self.user_repository.get_by_id(user_id)
-
         if user.mono_token:
             return True
-
         return False
 
     def get_accounts(self, user_id):
         return self.mono_repository.get_by_user_id(user_id)
-
 
     def save_cards_info(self, user_id):
         token = self.get_mono_token(user_id)
@@ -92,4 +89,13 @@ class MonoService:
 
         self.logger.info(f"Successfully saved accounts info for client with name {raw_data['name']}")
         return f"Successfully saved accounts info for client with name {raw_data['name']}"
+
+    def delete_card(self, card_id):
+        card = self.mono_repository.get_card_by_id(card_id)
+
+        if not card:
+            raise ValueError("The card doesn't exist")
+
+        self.mono_repository.delete(card_id)
+        return f"The card with id {card_id} was successfully deleted"
 

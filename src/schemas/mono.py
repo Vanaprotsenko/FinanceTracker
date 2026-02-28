@@ -15,7 +15,7 @@ class MonoTransactionOut(BaseModel):
 
 
 class MonoCardOut(BaseModel):
-    id: uuid.UUID
+    user_id: uuid.UUID
     card_id: str
     currency_code: int
     balance: float
