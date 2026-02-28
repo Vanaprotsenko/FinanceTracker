@@ -122,7 +122,7 @@ class MonoService:
         return card
 
     def fetch_transactions(self, card_id: str, user_id) -> Dict:
-        from_ts = int(time.time()) - 7 * 24 * 3600  # the last 30 days
+        from_ts = int(time.time()) - 30 * 24 * 3600  # the last 30 days
         to_ts = int(time.time())
 
         resp = requests.get(

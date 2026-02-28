@@ -15,8 +15,8 @@ class MonoRepository(Repository):
     def get_card_by_id(self, card_id: str) -> MonoCards:
         return self.session.query(MonoCards).filter_by(card_id=card_id).first()
 
-    def get_all_transaction_by_card_id(self, card_id: str) -> MonoTransaction:
-        return self.session.query(MonoTransaction).filter_by(card_id=card_id).first()
+    def get_all_transaction_by_card_id(self, card_id) -> list[MonoTransaction]:
+        return self.session.query(MonoTransaction).filter_by(card_id=card_id).all()
 
     def add(self, mono: MonoCards | MonoTransaction):
         self.session.add(mono)
@@ -29,6 +29,11 @@ class MonoRepository(Repository):
 
     def update(self, user_id):
         pass
+
+    def update_card(self, card: MonoCards):
+        self.session.commit()
+        self.session.refresh(card)
+        return card
 
     def delete(self, card_id):
         card = self.get_card_by_id(card_id)

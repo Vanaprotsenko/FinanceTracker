@@ -218,7 +218,7 @@
                 <!-- Cards Grid -->
                 <div x-show="!monoCardsLoading && monoCards.length > 0" class="mono-cards-grid">
                     <template x-for="(card, idx) in monoCards" :key="card.card_id">
-                        <div class="mono-card-block"
+                        <div class="mono-card-block" @click="openCardDetail(card)"
                             :class="'mono-card-' + getCurrencyInfo(card.currency_code).code.toLowerCase()"
                             :style="'animation-delay:' + (idx * 0.07) + 's'">
                             <!-- Card pattern overlay -->
@@ -228,7 +228,7 @@
                                 <button class="mono-card-menu-btn" @click.stop="menuOpen = !menuOpen"
                                     title="Actions">⋮</button>
                                 <div class="mono-card-dropdown" x-show="menuOpen" x-transition.opacity.duration.150ms
-                                    @click="menuOpen = false">
+                                    @click.stop="menuOpen = false">
                                     <button class="dropdown-item" @click="addTransactions(card.card_id)">
                                         <span class="dropdown-icon">📥</span> Add Transactions
                                     </button>
@@ -260,7 +260,7 @@
                             <div class="mono-card-footer">
                                 <div class="mono-card-id" x-text="truncateCardId(card.card_id)"></div>
                                 <div class="mono-card-txn" x-show="card.transactions && card.transactions.length > 0">
-                                    <span x-text="card.transactions.length"></span> txn
+                                    <span x-text="card.transactions.length"></span> txn →
                                 </div>
                             </div>
                             <!-- Mono branding -->
@@ -277,6 +277,71 @@
                 </div>
             </section>
         </main>
+
+        <!-- Transaction Detail Modal -->
+        <div x-show="selectedCard" x-transition.opacity class="modal" @click.self="closeCardDetail()">
+            <div class="txn-modal-content glass">
+                <!-- Modal header with card info -->
+                <div class="txn-modal-header"
+                    :class="selectedCard ? 'mono-card-' + getCurrencyInfo(selectedCard.currency_code).code.toLowerCase() : ''">
+                    <div class="txn-modal-header-inner">
+                        <div class="txn-modal-card-info">
+                            <span class="txn-modal-flag"
+                                x-text="selectedCard ? getCurrencyInfo(selectedCard.currency_code).flag : ''"></span>
+                            <div>
+                                <div class="txn-modal-currency"
+                                    x-text="selectedCard ? getCurrencyInfo(selectedCard.currency_code).code : ''"></div>
+                                <div class="txn-modal-balance"
+                                    x-text="selectedCard ? formatCardBalance(selectedCard.balance, selectedCard.currency_code) : ''">
+                                </div>
+                            </div>
+                        </div>
+                        <button class="txn-modal-close" @click="closeCardDetail()">✕</button>
+                    </div>
+                </div>
+
+                <!-- Transaction count -->
+                <div class="txn-modal-subheader">
+                    <h3>Transactions</h3>
+                    <span class="txn-count-badge"
+                        x-text="selectedCard && selectedCard.transactions ? selectedCard.transactions.length : 0"></span>
+                </div>
+
+                <!-- Transaction list -->
+                <div class="txn-list">
+                    <template x-if="selectedCard && selectedCard.transactions && selectedCard.transactions.length > 0">
+                        <div>
+                            <template x-for="(txn, i) in selectedCard.transactions" :key="txn.id">
+                                <div class="txn-row" :style="'animation-delay:' + (i * 0.03) + 's'">
+                                    <div class="txn-icon" :class="txn.amount >= 0 ? 'txn-income' : 'txn-expense'">
+                                        <span x-text="txn.amount >= 0 ? '↑' : '↓'"></span>
+                                    </div>
+                                    <div class="txn-info">
+                                        <div class="txn-description" x-text="txn.description"></div>
+                                        <div class="txn-date" x-text="formatTxnDate(txn.time)"></div>
+                                    </div>
+                                    <div class="txn-amounts">
+                                        <div class="txn-amount"
+                                            :class="txn.amount >= 0 ? 'txn-amount-pos' : 'txn-amount-neg'"
+                                            x-text="formatTxnAmount(txn.amount, selectedCard.currency_code)"></div>
+                                        <div class="txn-op-amount" x-show="txnOperationInfo(txn)"
+                                            x-text="txnOperationInfo(txn)"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template
+                        x-if="!selectedCard || !selectedCard.transactions || selectedCard.transactions.length === 0">
+                        <div class="txn-empty">
+                            <div class="txn-empty-icon">📄</div>
+                            <p>No transactions yet</p>
+                            <p class="txn-empty-hint">Use the ⋮ menu → "Add Transactions" to sync</p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
 
         <!-- Record Modal -->
         <div x-show="showModal" x-transition.opacity class="modal" @click.self="showModal = false">

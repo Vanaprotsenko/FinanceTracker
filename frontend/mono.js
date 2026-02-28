@@ -68,14 +68,52 @@ const MonoMixin = {
     async addTransactions(cardId) {
         this.showToast('Syncing transactions…', 'info');
         try {
-            await this.apiFetch('/mono/save-transaction', {
-                method: 'POST',
-                body: JSON.stringify({ card_id: cardId })
+            await this.apiFetch(`/mono/save-transaction?card_id=${encodeURIComponent(cardId)}`, {
+                method: 'POST'
             });
             this.showToast('Transactions added', 'success');
             await this.loadMonoCards();
         } catch (e) {
             // apiFetch already shows error toast
         }
+    },
+
+    // --- Transaction Detail Modal ---
+    selectedCard: null,
+
+    openCardDetail(card) {
+        this.selectedCard = card;
+    },
+
+    closeCardDetail() {
+        this.selectedCard = null;
+    },
+
+    formatTxnAmount(amount, currencyCode) {
+        const info = this.getCurrencyInfo(currencyCode);
+        const val = (Math.abs(amount) / 100);
+        const formatted = val.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const sign = amount >= 0 ? '+' : '−';
+        return `${sign} ${info.symbol}${formatted}`;
+    },
+
+    formatTxnDate(isoString) {
+        const d = new Date(isoString);
+        const day = d.getDate().toString().padStart(2, '0');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = months[d.getMonth()];
+        const hours = d.getHours().toString().padStart(2, '0');
+        const mins = d.getMinutes().toString().padStart(2, '0');
+        return `${day} ${month}, ${hours}:${mins}`;
+    },
+
+    txnOperationInfo(txn) {
+        // Show operation amount if different currency than card
+        if (this.selectedCard && txn.currency_code !== this.selectedCard.currency_code) {
+            const info = this.getCurrencyInfo(txn.currency_code);
+            const val = (Math.abs(txn.operationAmount) / 100);
+            return `${info.symbol}${val.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+        }
+        return null;
     },
 };
