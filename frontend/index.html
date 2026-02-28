@@ -23,6 +23,8 @@
                 <div class="nav-links">
                     <button class="nav-btn" :class="{ active: view === 'dashboard' }"
                         @click="showView('dashboard')">Dashboard</button>
+                    <button class="nav-btn" :class="{ active: view === 'mono-cards' }"
+                        @click="showView('mono-cards')">Mono Cards</button>
                     <button class="nav-btn" :class="{ active: view === 'stats' }"
                         @click="showView('stats')">Statistics</button>
                     <button class="nav-btn logout" @click="logout()">Logout</button>
@@ -191,6 +193,89 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Mono Cards Section -->
+            <section x-show="token && view === 'mono-cards'" x-transition.opacity.duration.300ms>
+                <div class="dashboard-header">
+                    <h2>Mono Cards</h2>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn mono-btn" :class="{ 'btn-loading': monoSyncing }" :disabled="monoSyncing"
+                            @click="syncMonoCards()">
+                            <span x-text="monoSyncing ? 'Syncing…' : '↻ Sync from Mono'"></span>
+                        </button>
+                        <button class="btn primary-btn" @click="connectMono()"
+                            style="width:auto; padding:0.6rem 1.25rem; font-size:0.9rem;">+ Add Token</button>
+                    </div>
+                </div>
+
+                <!-- Loading skeletons -->
+                <div x-show="monoCardsLoading" class="mono-cards-grid">
+                    <div class="skeleton mono-skeleton-card"></div>
+                    <div class="skeleton mono-skeleton-card"></div>
+                    <div class="skeleton mono-skeleton-card"></div>
+                </div>
+
+                <!-- Cards Grid -->
+                <div x-show="!monoCardsLoading && monoCards.length > 0" class="mono-cards-grid">
+                    <template x-for="(card, idx) in monoCards" :key="card.card_id">
+                        <div class="mono-card-block"
+                            :class="'mono-card-' + getCurrencyInfo(card.currency_code).code.toLowerCase()"
+                            :style="'animation-delay:' + (idx * 0.07) + 's'">
+                            <!-- Card pattern overlay -->
+                            <div class="mono-card-pattern"></div>
+                            <!-- Three-dots menu -->
+                            <div class="mono-card-menu" x-data="{ menuOpen: false }" @click.outside="menuOpen = false">
+                                <button class="mono-card-menu-btn" @click.stop="menuOpen = !menuOpen"
+                                    title="Actions">⋮</button>
+                                <div class="mono-card-dropdown" x-show="menuOpen" x-transition.opacity.duration.150ms
+                                    @click="menuOpen = false">
+                                    <button class="dropdown-item" @click="addTransactions(card.card_id)">
+                                        <span class="dropdown-icon">📥</span> Add Transactions
+                                    </button>
+                                    <div class="dropdown-divider"></div>
+                                    <button class="dropdown-item dropdown-danger" @click="deleteMonoCard(card.card_id)">
+                                        <span class="dropdown-icon">🗑</span> Delete Card
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Top row: chip + currency badge -->
+                            <div class="mono-card-top">
+                                <div class="mono-card-chip">
+                                    <div class="chip-line"></div>
+                                    <div class="chip-line"></div>
+                                </div>
+                                <div class="mono-card-badge">
+                                    <span class="mono-card-flag"
+                                        x-text="getCurrencyInfo(card.currency_code).flag"></span>
+                                    <span class="mono-card-currency"
+                                        x-text="getCurrencyInfo(card.currency_code).code"></span>
+                                </div>
+                            </div>
+                            <!-- Balance -->
+                            <div class="mono-card-balance" x-text="formatCardBalance(card.balance, card.currency_code)">
+                            </div>
+                            <div class="mono-card-currency-name" x-text="getCurrencyInfo(card.currency_code).name">
+                            </div>
+                            <!-- Footer -->
+                            <div class="mono-card-footer">
+                                <div class="mono-card-id" x-text="truncateCardId(card.card_id)"></div>
+                                <div class="mono-card-txn" x-show="card.transactions && card.transactions.length > 0">
+                                    <span x-text="card.transactions.length"></span> txn
+                                </div>
+                            </div>
+                            <!-- Mono branding -->
+                            <div class="mono-card-brand">monobank</div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Empty state -->
+                <div x-show="!monoCardsLoading && monoCards.length === 0" class="empty-state">
+                    <div class="empty-state-icon">💳</div>
+                    <h3>No Mono cards yet</h3>
+                    <p>Connect your Monobank token and click "Sync from Mono" to load your cards.</p>
+                </div>
+            </section>
         </main>
 
         <!-- Record Modal -->
@@ -273,7 +358,8 @@
         <div id="toast-container"></div>
     </div>
 
-    <script src="app.js?v=5"></script>
+    <script src="mono.js?v=1"></script>
+    <script src="app.js?v=6"></script>
 </body>
 
 </html>

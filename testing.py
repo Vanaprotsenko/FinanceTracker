@@ -17,19 +17,20 @@ import requests
 #
 # print(get_accounts(MONO_TOKEN))
 
-with open("accounts.json") as json_file:
-    accounts = json.load(json_file)
+with open("data_for_last_7_days.json") as json_file:
+    data = json.load(json_file)
 
 
-raw_data = accounts["accounts"]
 result = []
 
-for item in raw_data:
+for item in data:
     result.append({
         "id": item["id"],
+        "time": item["time"],
+        "description": item["description"],
+        "amount": item["amount"],
         "currencyCode": item["currencyCode"],
-        "balance": item["balance"],
-        "maskedPan": item["maskedPan"],
+        "operationAmount": item["operationAmount"],
     })
 
 # print(result)

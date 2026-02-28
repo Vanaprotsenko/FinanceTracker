@@ -9,12 +9,6 @@ from src.repositories.user import UserRepository
 from src.repositories.mono import MonoRepository
 from src.models.mono import MonoCards, MonoTransaction
 
-CURRENCY_CODES = {
-        980: "UAH",
-        840: "USD",
-        978: "EUR"
-}
-
 # MONO_TOKEN = "uYx7tn2hTySXt4fpl7y1EB2HbGnTsOTnzKXMjfpJ7Vd0"
 # UAN_ACCOUNT_ID = "5AwYrwUNZWwsrC0juS1T9A"
 #
@@ -65,7 +59,7 @@ class MonoService:
         return user.mono_token
 
     def get_card_info(self, user_id):
-        return self.mono_repository.get_all_transaction_by_user_id(user_id)
+        return self.mono_repository.get_all_cards_by_user_id(user_id)
 
     def save_mono_cards_data(self, token: str, user_id):
         resp = requests.get(
@@ -89,6 +83,55 @@ class MonoService:
 
         self.logger.info(f"Successfully saved accounts info for client with name {raw_data['name']}")
         return f"Successfully saved accounts info for client with name {raw_data['name']}"
+
+    def get_transactions_by_card_id(self, card_id):
+        card = self.mono_repository.get_card_by_id(card_id)
+        if not card:
+            raise ValueError(f"Card with id {card_id} not found")
+        return self.mono_repository.get_all_transaction_by_card_id(card.id)
+
+    def save_transaction(self, card_id, user_id):
+
+        card = self.mono_repository.get_card_by_id(card_id)
+        if not card:
+            raise ValueError(f"Card with id {card_id} not found")
+
+        data = self.fetch_transactions(card_id, user_id)
+
+        for item in data:
+            mono_transaction = MonoTransaction(
+                card_id=card.id,
+                time=datetime.fromtimestamp(item.get("time")),
+                description=item.get("description"),
+                amount=item.get("amount"),
+                operationAmount=item.get("operationAmount"),
+                currency_code=item.get("currencyCode"),
+            )
+            self.mono_repository.add(mono_transaction)
+            self.logger.info(
+                f"Successfully saved transaction for card with id {card_id} and time {item.get('time')}"
+            )
+        return f"Successfully saved {len(data)} transactions for card {card_id}"
+
+    def get_card_by_id(self, card_id):
+        card = self.mono_repository.get_card_by_id(card_id)
+
+        if not card:
+            raise ValueError("The card doesn't exist")
+
+        return card
+
+    def fetch_transactions(self, card_id: str, user_id) -> Dict:
+        from_ts = int(time.time()) - 7 * 24 * 3600  # the last 30 days
+        to_ts = int(time.time())
+
+        resp = requests.get(
+            f"https://api.monobank.ua/personal/statement/{card_id}/{from_ts}/{to_ts}",
+            headers={"X-Token": self.get_mono_token(user_id)}
+        )
+
+        resp.raise_for_status()
+        return resp.json()
 
     def delete_card(self, card_id):
         card = self.mono_repository.get_card_by_id(card_id)

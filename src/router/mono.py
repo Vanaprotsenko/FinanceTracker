@@ -8,7 +8,7 @@ from src.dependencies.auth import get_current_user_id
 from src.repositories.mono import MonoRepository
 from src.repositories.user import UserRepository
 from src.schemas.user import UserSaveMonoToken, UserResponseMonoToken
-from src.schemas.mono import MonoAccountsResponse
+from src.schemas.mono import MonoAccountsResponse, MonoTransactionResponse
 from src.services.mono import MonoService
 
 router = APIRouter(prefix="/mono", tags=["mono"])
@@ -93,6 +93,39 @@ async def delete_mono_card(
 
         service.delete_card(card_id)
         return UserResponseMonoToken(response=f"The card with id: {card_id} was successfully deleted")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/save-transaction", response_model=UserResponseMonoToken)
+async def add_transaction(
+    card_id: str,
+    session: Session = Depends(get_db),
+    user_id: UUID = Depends(get_current_user_id)
+):
+    try:
+        repository = UserRepository(session)
+        mono_repository = MonoRepository(session)
+        service = MonoService(repository, mono_repository)
+
+        result = service.save_transaction(card_id, user_id)
+        return UserResponseMonoToken(response=result)
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/get-transaction", response_model=MonoTransactionResponse)
+async def get_transaction(
+    card_id: str,
+    session: Session = Depends(get_db)
+):
+    try:
+        repository = UserRepository(session)
+        mono_repository = MonoRepository(session)
+        service = MonoService(repository, mono_repository)
+
+        transaction = service.get_transactions_by_card_id(card_id)
+        return MonoTransactionResponse(response=transaction)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

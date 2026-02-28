@@ -13,6 +13,8 @@ class MonoTransactionOut(BaseModel):
     class Config:
         orm_mode = True
 
+class MonoTransactionResponse(BaseModel):
+    response: list[MonoTransactionOut]
 
 class MonoCardOut(BaseModel):
     user_id: uuid.UUID

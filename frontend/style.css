@@ -773,6 +773,317 @@ hr {
     letter-spacing: 0.05em;
 }
 
+/* === MONO CARDS === */
+.mono-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+}
+
+.mono-skeleton-card {
+    height: 190px;
+    border-radius: var(--radius-xl);
+}
+
+/* --- Card Block (bank-card style) --- */
+.mono-card-block {
+    position: relative;
+    padding: 1.6rem 1.75rem 1.35rem;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-xl);
+    min-height: 195px;
+    animation: cardAppear 0.45s ease-out both;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: default;
+}
+
+/* Pattern overlay — decorative circles */
+.mono-card-pattern {
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    border: 40px solid rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+    transition: transform 0.5s ease;
+}
+
+.mono-card-block::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -15%;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 35px solid rgba(255, 255, 255, 0.03);
+    pointer-events: none;
+}
+
+/* --- Per-currency gradients --- */
+.mono-card-uah {
+    background: linear-gradient(135deg, #1e2a5e 0%, #3b2f7e 40%, #5b34a5 100%);
+    box-shadow: 0 8px 32px rgba(91, 52, 165, 0.25);
+}
+
+.mono-card-uah:hover {
+    box-shadow: 0 16px 48px rgba(91, 52, 165, 0.4),
+        0 0 0 1px rgba(139, 92, 246, 0.3);
+}
+
+.mono-card-usd {
+    background: linear-gradient(135deg, #0d3b2e 0%, #1a5c44 40%, #22836a 100%);
+    box-shadow: 0 8px 32px rgba(34, 131, 106, 0.2);
+}
+
+.mono-card-usd:hover {
+    box-shadow: 0 16px 48px rgba(34, 131, 106, 0.35),
+        0 0 0 1px rgba(52, 211, 153, 0.25);
+}
+
+.mono-card-eur {
+    background: linear-gradient(135deg, #3d2e0a 0%, #6b4f1a 40%, #967028 100%);
+    box-shadow: 0 8px 32px rgba(150, 112, 40, 0.2);
+}
+
+.mono-card-eur:hover {
+    box-shadow: 0 16px 48px rgba(150, 112, 40, 0.35),
+        0 0 0 1px rgba(251, 191, 36, 0.25);
+}
+
+/* Hover lift */
+.mono-card-block:hover {
+    transform: translateY(-6px) scale(1.015);
+}
+
+.mono-card-block:hover .mono-card-pattern {
+    transform: scale(1.08) rotate(5deg);
+}
+
+/* --- Top row: chip + badge --- */
+.mono-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.1rem;
+}
+
+/* Card chip */
+.mono-card-chip {
+    width: 40px;
+    height: 30px;
+    background: linear-gradient(145deg, #e8c547 0%, #d4a94f 50%, #c79b3a 100%);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.chip-line {
+    height: 2px;
+    background: rgba(180, 140, 30, 0.5);
+    border-radius: 1px;
+}
+
+/* Currency badge */
+.mono-card-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    border-radius: 100px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mono-card-flag {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.mono-card-currency {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* --- Balance --- */
+.mono-card-balance {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    margin-bottom: 0.1rem;
+}
+
+.mono-card-currency-name {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-bottom: auto;
+}
+
+/* --- Footer --- */
+.mono-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.85rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mono-card-id {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    letter-spacing: 0.04em;
+}
+
+.mono-card-txn {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 100px;
+}
+
+/* Mono branding */
+.mono-card-brand {
+    position: absolute;
+    bottom: 1rem;
+    right: 1.5rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
+    color: rgba(255, 255, 255, 0.15);
+}
+
+/* --- Three-dots menu --- */
+.mono-card-menu {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    z-index: 5;
+}
+
+.mono-card-menu-btn {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    font-size: 1.1rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    opacity: 0;
+    transition: all var(--transition-fast);
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.mono-card-block:hover .mono-card-menu-btn {
+    opacity: 1;
+}
+
+.mono-card-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    transform: scale(1.1);
+}
+
+/* Dropdown */
+.mono-card-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 180px;
+    background: rgba(20, 27, 45, 0.95);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    padding: 0.35rem;
+    z-index: 10;
+}
+
+.dropdown-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: rgba(255, 255, 255, 0.85);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.dropdown-icon {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.07);
+    margin: 0.25rem 0.5rem;
+}
+
+.dropdown-danger:hover {
+    background: rgba(248, 113, 113, 0.12);
+    color: var(--danger);
+}
+
+/* Sync button loading pulse */
+.btn-loading {
+    pointer-events: none;
+    animation: syncPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes syncPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.55;
+    }
+}
+
 /* === MODAL === */
 .modal {
     position: fixed;
@@ -952,6 +1263,10 @@ hr {
     }
 
     .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mono-cards-grid {
         grid-template-columns: 1fr;
     }
 

@@ -9,11 +9,14 @@ class MonoRepository(Repository):
     def get_by_user_id(self, user_id: str) -> MonoCards:
         return self.session.query(MonoCards).filter_by(user_id=user_id).first()
 
-    def get_all_transaction_by_user_id(self, user_id: str) -> MonoCards:
+    def get_all_cards_by_user_id(self, user_id: str) -> MonoCards:
         return self.session.query(MonoCards).filter_by(user_id=user_id).all()
 
     def get_card_by_id(self, card_id: str) -> MonoCards:
         return self.session.query(MonoCards).filter_by(card_id=card_id).first()
+
+    def get_all_transaction_by_card_id(self, card_id: str) -> MonoTransaction:
+        return self.session.query(MonoTransaction).filter_by(card_id=card_id).first()
 
     def add(self, mono: MonoCards | MonoTransaction):
         self.session.add(mono)

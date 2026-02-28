@@ -14,6 +14,9 @@ const EXCHANGE_RATES = {
 document.addEventListener('alpine:init', () => {
     Alpine.data('app', () => ({
 
+        // --- Mono Cards (from mono.js mixin) ---
+        ...MonoMixin,
+
         token: localStorage.getItem('token'),
         authMode: 'login',
         authLoading: false,
@@ -217,6 +220,7 @@ document.addEventListener('alpine:init', () => {
             this.view = name;
             if (name === 'dashboard') this.loadRecords();
             if (name === 'stats') this.$nextTick(() => this.renderCharts());
+            if (name === 'mono-cards') this.loadMonoCards();
         },
 
         // === RECORDS ===
