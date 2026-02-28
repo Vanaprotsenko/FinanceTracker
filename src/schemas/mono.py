@@ -1,0 +1,28 @@
+import uuid
+from datetime import datetime
+from pydantic import BaseModel
+
+class MonoTransactionOut(BaseModel):
+    id: uuid.UUID
+    time: datetime
+    description: str
+    amount: float
+    operationAmount: float
+    currency_code: int
+
+    class Config:
+        orm_mode = True
+
+
+class MonoCardOut(BaseModel):
+    id: uuid.UUID
+    card_id: str
+    currency_code: int
+    balance: float
+    transactions: list[MonoTransactionOut] = []
+
+    class Config:
+        orm_mode = True
+
+class MonoAccountsResponse(BaseModel):
+    response: list[MonoCardOut]

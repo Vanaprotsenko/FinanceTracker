@@ -316,7 +316,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             try {
-                await this.apiFetch('/auth/mono/savetoken', {
+                await this.apiFetch('/mono/savetoken', {
                     method: 'POST',
                     body: JSON.stringify({ mono_token: this.monoToken.trim() })
                 });

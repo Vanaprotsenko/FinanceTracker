@@ -15,7 +15,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/signup", status_code=status.HTTP_201_CREATED, response_model=ReadUser)
 async def signup(
         user_in: UserCreate,
-        password: str, # Keeping it simple for now as per current structure, but usually it's in UserCreate
+        password: str,
         session: Session = Depends(get_db)
 ):
     repository = UserRepository(session)
@@ -40,16 +40,3 @@ async def login(
         return {"access_token": token, "token_type": "bearer"}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-
-
-@router.post("/mono/savetoken", response_model=UserResponseMonoToken)
-async def save_mono_token(
-    data: UserSaveMonoToken,
-    session: Session = Depends(get_db),
-    user_id: UUID = Depends(get_current_user_id),
-):
-    repository = UserRepository(session)
-    service = MonoService(repository)
-
-    service.save_token(user_id, data.mono_token)
-    return UserResponseMonoToken(response="Successfully saved token")
