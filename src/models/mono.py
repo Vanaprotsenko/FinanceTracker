@@ -41,7 +41,7 @@ class MonoTransaction(Base):
     description = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     operationAmount = Column(Float, nullable=False)
-    currency_code = Column(Integer, nullable=False)
+    currency = Column(Integer, nullable=False)
 
     card = relationship("MonoCards", back_populates="transactions")
 

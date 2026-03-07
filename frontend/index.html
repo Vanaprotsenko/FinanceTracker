@@ -107,13 +107,23 @@
                 </div>
 
                 <!-- Filter Bar -->
-                <div class="filter-bar">
-                    <button class="filter-btn" :class="{ active: filter === 'all' }"
-                        @click="filter = 'all'">All</button>
-                    <button class="filter-btn" :class="{ active: filter === 'income' }"
-                        @click="filter = 'income'">Income</button>
-                    <button class="filter-btn" :class="{ active: filter === 'expense' }"
-                        @click="filter = 'expense'">Expenses</button>
+                <div class="filter-bar" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 0;">
+                        <button class="filter-btn" :class="{ active: filter === 'all' }"
+                            @click="filter = 'all'">All</button>
+                        <button class="filter-btn" :class="{ active: filter === 'income' }"
+                            @click="filter = 'income'">Income</button>
+                        <button class="filter-btn" :class="{ active: filter === 'expense' }"
+                            @click="filter = 'expense'">Expenses</button>
+                    </div>
+                    <select x-show="uniqueCards.length > 0" x-model="cardFilter"
+                        style="background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.45rem 0.75rem; font-family: inherit; font-size: 0.82rem; cursor: pointer; outline: none;">
+                        <option value="all">All Sources</option>
+                        <option value="manual">✏️ Manual</option>
+                        <template x-for="cid in uniqueCards" :key="cid">
+                            <option :value="cid" x-text="'💳 ' + cid.slice(0, 8) + '…'"></option>
+                        </template>
+                    </select>
                 </div>
 
                 <!-- Skeleton Loading -->
@@ -232,6 +242,10 @@
                                     <button class="dropdown-item" @click="addTransactions(card.card_id)">
                                         <span class="dropdown-icon">📥</span> Add Transactions
                                     </button>
+                                    <button class="dropdown-item" :disabled="syncingToRecords"
+                                        @click="syncTransactionsToRecords(card.card_id)">
+                                        <span class="dropdown-icon">📤</span> Sync to Records
+                                    </button>
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item dropdown-danger" @click="deleteMonoCard(card.card_id)">
                                         <span class="dropdown-icon">🗑</span> Delete Card
@@ -296,7 +310,13 @@
                                 </div>
                             </div>
                         </div>
-                        <button class="txn-modal-close" @click="closeCardDetail()">✕</button>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <button class="btn mono-btn" style="padding: 0.45rem 1rem; font-size: 0.8rem; width: auto;"
+                                :disabled="syncingToRecords" @click="syncTransactionsToRecords(selectedCard.card_id)">
+                                <span x-text="syncingToRecords ? 'Syncing…' : '📤 Sync to Records'"></span>
+                            </button>
+                            <button class="txn-modal-close" @click="closeCardDetail()">✕</button>
+                        </div>
                     </div>
                 </div>
 
@@ -423,8 +443,8 @@
         <div id="toast-container"></div>
     </div>
 
-    <script src="mono.js?v=1"></script>
-    <script src="app.js?v=6"></script>
+    <script src="mono.js?v=2"></script>
+    <script src="app.js?v=7"></script>
 </body>
 
 </html>

@@ -8,10 +8,13 @@ class MonoTransactionOut(BaseModel):
     description: str
     amount: float
     operationAmount: float
-    currency_code: int
+    currency: int
 
     class Config:
         orm_mode = True
+
+class MonoSaveTransactionResponse(BaseModel):
+    response: str
 
 class MonoTransactionResponse(BaseModel):
     response: list[MonoTransactionOut]
@@ -28,3 +31,6 @@ class MonoCardOut(BaseModel):
 
 class MonoAccountsResponse(BaseModel):
     response: list[MonoCardOut]
+
+class MonoSyncTransactionsResponse(BaseModel):
+    response: str

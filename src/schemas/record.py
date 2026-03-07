@@ -7,6 +7,7 @@ class RecordBase(BaseModel):
     type: Optional[str] = "expense"
     currency: str
     description: str
+    mono_card_id: Optional[str] = None
 
 class RecordCreate(RecordBase):
     class Config:
@@ -17,6 +18,7 @@ class RecordResponse(BaseModel):
 
 class RecordRead(RecordBase):
     id: uuid.UUID
+    mono_card_id: Optional[str] = None
 
     class Config:
         orm_mode = True

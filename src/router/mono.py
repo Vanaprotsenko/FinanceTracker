@@ -7,8 +7,11 @@ from src.db.database import get_db
 from src.dependencies.auth import get_current_user_id
 from src.repositories.mono import MonoRepository
 from src.repositories.user import UserRepository
+from src.repositories.record import RecordRepository
+from src.schemas.record import RecordRead
+from src.services.record import RecordService
 from src.schemas.user import UserSaveMonoToken, UserResponseMonoToken
-from src.schemas.mono import MonoAccountsResponse, MonoTransactionResponse
+from src.schemas.mono import MonoAccountsResponse, MonoTransactionResponse, MonoSyncTransactionsResponse
 from src.services.mono import MonoService
 
 router = APIRouter(prefix="/mono", tags=["mono"])
@@ -60,7 +63,7 @@ async def save_mono_cards(
         mono_repository = MonoRepository(session)
         service = MonoService(repository, mono_repository)
 
-        connection = service.save_cards_info(user_id)
+        connection = await service.save_cards_info(user_id)
         return UserResponseMonoToken(response=f"The Mono Bank was successfully connected for user id {user_id}")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -126,6 +129,28 @@ async def get_transaction(
 
         transaction = service.get_transactions_by_card_id(card_id)
         return MonoTransactionResponse(response=transaction)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/sync-transactions", response_model=list[RecordRead])
+async def sync_transactions(
+        card_id: str,
+        session: Session = Depends(get_db),
+        user_id: UUID = Depends(get_current_user_id)
+):
+    try:
+        repository = UserRepository(session)
+        mono_repository = MonoRepository(session)
+        record_repository = RecordRepository(session)
+
+        service = MonoService(repository, mono_repository)
+        transaction = service.get_transactions_by_card_id(card_id)
+
+        record_service = RecordService(record_repository)
+        result = record_service.create_records(user_id, transaction, card_id)
+
+        return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

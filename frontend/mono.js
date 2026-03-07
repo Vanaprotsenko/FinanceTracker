@@ -74,11 +74,26 @@ const MonoMixin = {
             this.showToast('Transactions added', 'success');
             await this.loadMonoCards();
         } catch (e) {
-            // apiFetch already shows error toast
         }
     },
 
-    // --- Transaction Detail Modal ---
+    syncingToRecords: false,
+
+    async syncTransactionsToRecords(cardId) {
+        if (this.syncingToRecords) return;
+        this.syncingToRecords = true;
+        this.showToast('Syncing transactions to records…', 'info');
+        try {
+            const data = await this.apiFetch(`/mono/sync-transactions?card_id=${encodeURIComponent(cardId)}`, {
+                method: 'POST'
+            });
+            this.showToast(data?.response || 'Transactions synced to records', 'success');
+        } catch (e) {
+        } finally {
+            this.syncingToRecords = false;
+        }
+    },
+
     selectedCard: null,
 
     openCardDetail(card) {
@@ -109,8 +124,8 @@ const MonoMixin = {
 
     txnOperationInfo(txn) {
         // Show operation amount if different currency than card
-        if (this.selectedCard && txn.currency_code !== this.selectedCard.currency_code) {
-            const info = this.getCurrencyInfo(txn.currency_code);
+        if (this.selectedCard && txn.currency !== this.selectedCard.currency_code) {
+            const info = this.getCurrencyInfo(txn.currency);
             const val = (Math.abs(txn.operationAmount) / 100);
             return `${info.symbol}${val.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
         }

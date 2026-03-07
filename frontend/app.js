@@ -31,6 +31,7 @@ document.addEventListener('alpine:init', () => {
         records: [],
         loading: false,
         filter: 'all',
+        cardFilter: 'all',
 
         // --- Modal State ---
         showModal: false,
@@ -51,9 +52,24 @@ document.addEventListener('alpine:init', () => {
         trendChart: null,
 
         get filteredRecords() {
-            if (this.filter === 'income') return this.records.filter(r => r.amount >= 0);
-            if (this.filter === 'expense') return this.records.filter(r => r.amount < 0);
-            return this.records;
+            let result = this.records;
+            if (this.cardFilter !== 'all') {
+                if (this.cardFilter === 'manual') {
+                    result = result.filter(r => !r.mono_card_id);
+                } else {
+                    result = result.filter(r => r.mono_card_id === this.cardFilter);
+                }
+            }
+            if (this.filter === 'income') return result.filter(r => r.amount >= 0);
+            if (this.filter === 'expense') return result.filter(r => r.amount < 0);
+            return result;
+        },
+
+        get uniqueCards() {
+            const cards = this.records
+                .filter(r => r.mono_card_id)
+                .map(r => r.mono_card_id);
+            return [...new Set(cards)];
         },
 
         // Detect if all records use the same currency

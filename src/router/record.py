@@ -20,9 +20,9 @@ async def list_records(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=RecordResponse)
 async def create_record(
-        record: RecordCreate,
-        user_id: uuid.UUID = Depends(get_current_user_id),
-        db: Session = Depends(get_db)
+    record: RecordCreate,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
 ):
     repository = RecordRepository(db)
     service = RecordService(repository)
