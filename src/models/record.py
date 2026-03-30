@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 
 from src.db.database import Base
-from sqlalchemy import Column, String, UUID, ForeignKey, Float
+from sqlalchemy import Column, String, UUID, ForeignKey, Float, DateTime
 
 
 class Record(Base):
@@ -14,4 +15,5 @@ class Record(Base):
     description = Column(String)
     currency = Column(String)
     mono_card_id = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=True, default=datetime.utcnow)
 

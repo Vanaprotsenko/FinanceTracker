@@ -1,4 +1,6 @@
 import uuid
+from typing import Optional
+from datetime import datetime
 from fastapi import Depends, APIRouter, HTTPException, status
 from src.db.database import get_db
 from src.repositories.record import RecordRepository
@@ -66,7 +68,8 @@ async def update_record(
     record_id: uuid.UUID, 
     amount: float, 
     description: str, 
-    currency: str, 
+    currency: str,
+    created_at: Optional[datetime] = None,
     user_id: uuid.UUID = Depends(get_current_user_id),
     session: Session = Depends(get_db)
 ):
@@ -78,6 +81,6 @@ async def update_record(
     if not record or record.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
         
-    updated_record = service.update_record(record_id, user_id=user_id, amount=amount, description=description, currency=currency)
+    updated_record = service.update_record(record_id, user_id=user_id, amount=amount, description=description, currency=currency, created_at=created_at)
 
     return {"id": updated_record.id}

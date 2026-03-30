@@ -8,10 +8,10 @@ from src.dependencies.auth import get_current_user_id
 from src.repositories.mono import MonoRepository
 from src.repositories.user import UserRepository
 from src.repositories.record import RecordRepository
-from src.schemas.record import RecordRead
+from src.schemas.record import RecordRead, RecordCreate
 from src.services.record import RecordService
 from src.schemas.user import UserSaveMonoToken, UserResponseMonoToken
-from src.schemas.mono import MonoAccountsResponse, MonoTransactionResponse, MonoSyncTransactionsResponse
+from src.schemas.mono import MonoAccountsResponse, MonoTransactionResponse, MonoUpdateInfoResponse, MonoSyncResponse
 from src.services.mono import MonoService
 
 router = APIRouter(prefix="/mono", tags=["mono"])
@@ -27,7 +27,7 @@ async def save_mono_token(
     mono_repository = MonoRepository(session)
     service = MonoService(repository, mono_repository)
 
-    service.save_token(user_id, data.mono_token)
+    await service.save_token(user_id, data.mono_token)
     return UserResponseMonoToken(response="Successfully saved token")
 
 
@@ -40,7 +40,7 @@ async def verify_token(
         repository = UserRepository(session)
         mono_repository = MonoRepository(session)
         service = MonoService(repository, mono_repository)
-        has_token = service.verify_token(user_id)
+        has_token = await service.verify_token(user_id)
 
         if not has_token:
             raise HTTPException(
@@ -78,7 +78,7 @@ async def get_cards_info(
         mono_repository = MonoRepository(session)
         service = MonoService(repository, mono_repository)
 
-        cards_info = service.get_card_info(user_id)
+        cards_info = await service.get_card_info(user_id)
         return MonoAccountsResponse(response=cards_info)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -94,7 +94,7 @@ async def delete_mono_card(
         mono_repository = MonoRepository(session)
         service = MonoService(repository, mono_repository)
 
-        service.delete_card(card_id)
+        await service.delete_card(card_id)
         return UserResponseMonoToken(response=f"The card with id: {card_id} was successfully deleted")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -111,7 +111,7 @@ async def add_transaction(
         mono_repository = MonoRepository(session)
         service = MonoService(repository, mono_repository)
 
-        result = service.save_transaction(card_id, user_id)
+        result = await service.save_transaction(card_id, user_id)
         return UserResponseMonoToken(response=result)
 
     except ValueError as e:
@@ -127,31 +127,112 @@ async def get_transaction(
         mono_repository = MonoRepository(session)
         service = MonoService(repository, mono_repository)
 
-        transaction = service.get_transactions_by_card_id(card_id)
+        transaction = await service.get_transactions_by_card_id(card_id)
         return MonoTransactionResponse(response=transaction)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.post("/sync-transactions", response_model=list[RecordRead])
+@router.post("/sync-transactions", response_model=UserResponseMonoToken)
 async def sync_transactions(
         card_id: str,
         session: Session = Depends(get_db),
         user_id: UUID = Depends(get_current_user_id)
 ):
+    """Legacy endpoint — use POST /mono/sync instead."""
     try:
         repository = UserRepository(session)
         mono_repository = MonoRepository(session)
         record_repository = RecordRepository(session)
 
         service = MonoService(repository, mono_repository)
-        transaction = service.get_transactions_by_card_id(card_id)
+        transaction = await service.get_transactions_by_card_id(card_id)
+
+        parsed_records = []
+        for t in transaction:
+            parsed_records.append(RecordCreate(
+                amount=t.amount / 100.0,
+                type="income" if t.amount >= 0 else "expense",
+                currency=str(t.currency),
+                description=t.description,
+                mono_card_id=card_id,
+                created_at=t.time
+            ))
 
         record_service = RecordService(record_repository)
-        result = record_service.create_records(user_id, transaction, card_id)
+        result = record_service.create_records(user_id, parsed_records, card_id)
 
-        return result
+        return UserResponseMonoToken(
+            response=f"Created {result['records_created']} records, skipped {result['records_skipped']} duplicates"
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.post("/update-card-name", response_model=MonoUpdateInfoResponse)
+async def update_card_name(
+        card_id: str,
+        card_name: str,
+        session: Session = Depends(get_db),
+):
+    try:
+        repository = UserRepository(session)
+        mono_repository = MonoRepository(session)
+        service = MonoService(repository, mono_repository)
+
+        await service.update_card_name(card_id, card_name)
+
+        return MonoUpdateInfoResponse(response="Successfully updated card name")
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/sync", response_model=MonoSyncResponse)
+async def sync_card(
+        card_id: str,
+        session: Session = Depends(get_db),
+        user_id: UUID = Depends(get_current_user_id)
+):
+    """
+    Unified sync: fetches last 30 days from Mono API,
+    deduplicates mono_transactions, creates Records for new ones,
+    and updates the card balance.
+    """
+    try:
+        repository = UserRepository(session)
+        mono_repository = MonoRepository(session)
+        record_repository = RecordRepository(session)
+
+        service = MonoService(repository, mono_repository)
+
+        # Step 1: Fetch + dedup mono transactions
+        sync_result = await service.sync_card(card_id, user_id)
+
+        # Step 2: Create Records from NEW mono transactions only
+        parsed_records = []
+        for tx in sync_result["mono_transactions"]:
+            parsed_records.append(RecordCreate(
+                amount=tx.amount / 100.0,
+                type="income" if tx.amount >= 0 else "expense",
+                currency=str(tx.currency),
+                description=tx.description,
+                mono_card_id=card_id,
+                created_at=tx.time
+            ))
+
+        records_result = {"records_created": 0, "records_skipped": 0}
+        if parsed_records:
+            record_service = RecordService(record_repository)
+            records_result = record_service.create_records(user_id, parsed_records, card_id)
+
+        return MonoSyncResponse(
+            new_transactions=sync_result["new_transactions"],
+            skipped_duplicates=sync_result["skipped_duplicates"],
+            total_fetched=sync_result["total_fetched"],
+            records_created=records_result["records_created"],
+            records_skipped=records_result["records_skipped"],
+            card_id=card_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

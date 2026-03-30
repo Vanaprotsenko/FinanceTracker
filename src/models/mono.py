@@ -15,6 +15,7 @@ class MonoCards(Base):
     card_id = Column(String, unique=True, nullable=False)
     currency_code = Column(Integer, nullable=False)
     balance = Column(Float)
+    mono_card_name = Column(String, nullable=True)
 
     user = relationship("User", back_populates="mono_account")
 

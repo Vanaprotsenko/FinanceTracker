@@ -15,6 +15,15 @@ class RecordRepository(Repository):
     def get_all_for_user(self, user_id) -> list[Record]:
         return self.session.query(Record).filter_by(user_id=user_id).all()
 
+    def find_by_card_and_time(self, user_id, mono_card_id, created_at, amount):
+        """Check if a record with same card+time+amount exists (for dedup)."""
+        return self.session.query(Record).filter_by(
+            user_id=user_id,
+            mono_card_id=mono_card_id,
+            created_at=created_at,
+            amount=amount
+        ).first()
+
     def add(self, record: Record):
         self.session.add(record)
         self.session.commit()

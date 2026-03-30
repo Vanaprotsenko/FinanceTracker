@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Sign In | The Ledger</title>
+    <meta name="description" content="Sign in to The Ledger — your architectural finance tracker" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/css/shared.css" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#00322a",
+                        "surface-variant": "#e0e3e5",
+                        "outline-variant": "#c4c6d0",
+                        "surface-container-low": "#f2f4f6",
+                        "tertiary-fixed": "#68fadd",
+                        "surface": "#f7f9fb",
+                        "on-primary-container": "#7594ca",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface-variant": "#43474f",
+                        "surface-tint": "#405f91",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#eceef0",
+                        "on-surface": "#191c1e",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-container": "#00a58f",
+                        "on-tertiary-fixed": "#00201a",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-container": "#002b5b",
+                        "outline": "#747780",
+                        "error": "#ba1a1a",
+                        "primary": "#001736",
+                        "tertiary-fixed-dim": "#44ddc1",
+                        "tertiary": "#001b16",
+                        "on-primary": "#ffffff",
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="bg-surface font-body text-on-surface min-h-screen flex items-center justify-center p-6 lg:p-12">
+    <!-- Background Decoration -->
+    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-primary-container/10 blur-[120px]"></div>
+        <div class="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] rounded-full bg-tertiary-fixed/10 blur-[100px]"></div>
+    </div>
+
+    <main class="relative z-10 w-full max-w-md page-enter">
+        <div class="bg-surface-container-lowest rounded-[2rem] shadow-[0_40px_80px_-15px_rgba(0,23,54,0.06)] overflow-hidden border border-outline-variant/15">
+            <!-- Header -->
+            <div class="px-8 pt-10 pb-2 text-center">
+                <div class="flex items-center justify-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+                    </div>
+                    <h1 class="font-headline text-2xl font-extrabold tracking-tight text-primary">The Ledger</h1>
+                </div>
+                <p id="auth-subtitle" class="font-label text-sm text-on-surface-variant tracking-wide">Sign in to your account</p>
+            </div>
+
+            <!-- Tab Toggle -->
+            <div class="flex mx-8 mt-4 bg-surface-container-low rounded-xl p-1">
+                <button id="tab-login" onclick="switchTab('login')"
+                    class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 bg-primary text-on-primary">
+                    Sign In
+                </button>
+                <button id="tab-signup" onclick="switchTab('signup')"
+                    class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 text-on-surface-variant">
+                    Sign Up
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="form-login" class="px-8 pt-6 pb-10 space-y-5" onsubmit="handleLogin(event)">
+                <div class="space-y-2">
+                    <label class="block font-headline text-xs font-bold text-primary-container ml-1 opacity-70">EMAIL</label>
+                    <input id="login-email" type="email" required placeholder="you@example.com"
+                        class="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 font-body text-sm focus:ring-2 focus:ring-surface-tint/20 transition-all" />
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-headline text-xs font-bold text-primary-container ml-1 opacity-70">PASSWORD</label>
+                    <input id="login-password" type="password" required placeholder="••••••••"
+                        class="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 font-body text-sm focus:ring-2 focus:ring-surface-tint/20 transition-all" />
+                </div>
+                <div id="login-error" class="hidden text-error text-xs font-bold px-1"></div>
+                <button type="submit" id="login-btn"
+                    class="w-full bg-primary text-on-primary font-headline text-sm font-extrabold tracking-widest px-10 py-4 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all duration-200 uppercase flex items-center justify-center gap-2">
+                    <span id="login-btn-text">Sign In</span>
+                    <div id="login-spinner" class="hidden spinner" style="width:20px;height:20px;border-width:2px;border-top-color:#fff;"></div>
+                </button>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="form-signup" class="px-8 pt-6 pb-10 space-y-5 hidden" onsubmit="handleSignup(event)">
+                <div class="space-y-2">
+                    <label class="block font-headline text-xs font-bold text-primary-container ml-1 opacity-70">NAME</label>
+                    <input id="signup-name" type="text" required placeholder="Your name"
+                        class="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 font-body text-sm focus:ring-2 focus:ring-surface-tint/20 transition-all" />
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-headline text-xs font-bold text-primary-container ml-1 opacity-70">EMAIL</label>
+                    <input id="signup-email" type="email" required placeholder="you@example.com"
+                        class="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 font-body text-sm focus:ring-2 focus:ring-surface-tint/20 transition-all" />
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-headline text-xs font-bold text-primary-container ml-1 opacity-70">PASSWORD</label>
+                    <input id="signup-password" type="password" required minlength="6" placeholder="Minimum 6 characters"
+                        class="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 font-body text-sm focus:ring-2 focus:ring-surface-tint/20 transition-all" />
+                </div>
+                <div id="signup-error" class="hidden text-error text-xs font-bold px-1"></div>
+                <button type="submit" id="signup-btn"
+                    class="w-full bg-primary text-on-primary font-headline text-sm font-extrabold tracking-widest px-10 py-4 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all duration-200 uppercase flex items-center justify-center gap-2">
+                    <span id="signup-btn-text">Create Account</span>
+                    <div id="signup-spinner" class="hidden spinner" style="width:20px;height:20px;border-width:2px;border-top-color:#fff;"></div>
+                </button>
+            </form>
+        </div>
+
+        <!-- Bottom info -->
+        <div class="mt-6 text-center">
+            <div class="glass-panel px-6 py-2 rounded-full border border-outline-variant/20 shadow-xl inline-flex items-center space-x-4">
+                <div class="w-2 h-2 rounded-full bg-tertiary-fixed-dim animate-pulse"></div>
+                <span class="font-headline text-[10px] font-extrabold tracking-[0.2em] text-primary-container uppercase">The Ledger • Secure Finance</span>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        // If already logged in, redirect
+        if (isLoggedIn()) {
+            window.location.href = '/';
+        }
+
+        function switchTab(tab) {
+            const loginForm = document.getElementById('form-login');
+            const signupForm = document.getElementById('form-signup');
+            const tabLogin = document.getElementById('tab-login');
+            const tabSignup = document.getElementById('tab-signup');
+            const subtitle = document.getElementById('auth-subtitle');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                tabLogin.className = 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 bg-primary text-on-primary';
+                tabSignup.className = 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 text-on-surface-variant';
+                subtitle.textContent = 'Sign in to your account';
+            } else {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                tabLogin.className = 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 text-on-surface-variant';
+                tabSignup.className = 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 bg-primary text-on-primary';
+                subtitle.textContent = 'Create a new account';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+            const btnText = document.getElementById('login-btn-text');
+            const spinner = document.getElementById('login-spinner');
+
+            errorEl.classList.add('hidden');
+            btnText.textContent = 'Signing in...';
+            spinner.classList.remove('hidden');
+
+            try {
+                const data = await apiLogin(email, password);
+                saveToken(data.access_token);
+                window.location.href = '/';
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+                btnText.textContent = 'Sign In';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const errorEl = document.getElementById('signup-error');
+            const btnText = document.getElementById('signup-btn-text');
+            const spinner = document.getElementById('signup-spinner');
+
+            errorEl.classList.add('hidden');
+            btnText.textContent = 'Creating...';
+            spinner.classList.remove('hidden');
+
+            try {
+                await apiSignup(email, name, password);
+                // Auto-login after signup
+                const data = await apiLogin(email, password);
+                saveToken(data.access_token);
+                window.location.href = '/';
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+                btnText.textContent = 'Create Account';
+                spinner.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+
+</html>
