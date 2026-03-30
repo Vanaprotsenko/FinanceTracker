@@ -1,8 +1,13 @@
+from uuid import UUID
+
 from fastapi import Depends, APIRouter, HTTPException, status
-from src.db.database import get_db
-from src.repositories.user import UserRepository
-from src.schemas.user import UserCreate, ReadUser, Token, UserLogin
 from sqlalchemy.orm import Session
+
+from src.db.database import get_db
+from src.dependencies.auth import get_current_user_id
+from src.repositories.user import UserRepository
+from src.schemas.user import UserCreate, ReadUser, Token, UserLogin, UserSaveMonoToken, UserResponseMonoToken
+from src.services.mono import MonoService
 from src.services.user import UserService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -10,7 +15,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/signup", status_code=status.HTTP_201_CREATED, response_model=ReadUser)
 async def signup(
         user_in: UserCreate,
-        password: str, # Keeping it simple for now as per current structure, but usually it's in UserCreate
+        password: str,
         session: Session = Depends(get_db)
 ):
     repository = UserRepository(session)

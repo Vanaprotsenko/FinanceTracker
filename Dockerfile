@@ -20,4 +20,4 @@ RUN chmod +x /run_migrations.sh
 
 ENTRYPOINT ["/run_migrations.sh"]
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]

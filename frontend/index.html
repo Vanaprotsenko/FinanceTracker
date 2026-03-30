@@ -1,246 +1,310 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="light" lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanceTracker — Manage Your Wealth</title>
-    <meta name="description"
-        content="Track your income and expenses with FinanceTracker. Beautiful, fast, and easy to use.">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>The Ledger | Dashboard</title>
+    <meta name="description" content="Portfolio overview — The Ledger architectural finance dashboard" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/shared.css" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#00322a", "surface-variant": "#e0e3e5", "outline-variant": "#c4c6d0",
+                        "surface-container-low": "#f2f4f6", "tertiary-fixed": "#68fadd", "surface": "#f7f9fb",
+                        "inverse-primary": "#a9c7ff", "on-primary-container": "#7594ca",
+                        "surface-container-highest": "#e0e3e5", "surface-dim": "#d8dadc",
+                        "secondary-fixed": "#d5e3fc", "on-tertiary-fixed-variant": "#005145",
+                        "on-surface-variant": "#43474f", "on-secondary-fixed": "#0d1c2e",
+                        "on-primary-fixed": "#001b3d", "surface-tint": "#405f91",
+                        "on-secondary-fixed-variant": "#3a485b", "on-error-container": "#93000a",
+                        "surface-container": "#eceef0", "on-secondary-container": "#57657a",
+                        "secondary": "#515f74", "on-error": "#ffffff", "on-primary": "#ffffff",
+                        "on-tertiary-container": "#00a58f", "on-tertiary": "#ffffff",
+                        "secondary-container": "#d5e3fc", "on-surface": "#191c1e",
+                        "surface-container-lowest": "#ffffff", "error-container": "#ffdad6",
+                        "surface-bright": "#f7f9fb", "on-tertiary-fixed": "#00201a",
+                        "surface-container-high": "#e6e8ea", "on-primary-fixed-variant": "#264778",
+                        "primary-container": "#002b5b", "outline": "#747780",
+                        "inverse-on-surface": "#eff1f3", "error": "#ba1a1a",
+                        "on-background": "#191c1e", "background": "#f7f9fb",
+                        "on-secondary": "#ffffff", "inverse-surface": "#2d3133",
+                        "secondary-fixed-dim": "#b9c7df", "primary-fixed-dim": "#a9c7ff",
+                        "primary": "#001736", "primary-fixed": "#d6e3ff",
+                        "tertiary-fixed-dim": "#44ddc1", "tertiary": "#001b16"
+                    },
+                    fontFamily: { "headline": ["Manrope"], "body": ["Inter"], "label": ["Inter"] },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
 </head>
 
-<body x-data="app" x-init="init()">
-    <div id="app">
-        <!-- Navigation -->
-        <nav x-show="token" x-transition.opacity.duration.300ms>
-            <div class="nav-container">
-                <div class="logo">Finance<span>Tracker</span></div>
-                <div class="nav-links">
-                    <button class="nav-btn" :class="{ active: view === 'dashboard' }"
-                        @click="showView('dashboard')">Dashboard</button>
-                    <button class="nav-btn" :class="{ active: view === 'stats' }"
-                        @click="showView('stats')">Statistics</button>
-                    <button class="nav-btn logout" @click="logout()">Logout</button>
-                </div>
+<body class="bg-surface text-on-surface font-body selection:bg-tertiary-fixed selection:text-tertiary-container">
+    <!-- TopNavBar -->
+    <header class="fixed top-0 w-full z-50 bg-slate-50/70 backdrop-blur-xl flex justify-between items-center px-6 py-3 shadow-none">
+        <div class="flex items-center gap-4">
+            <span class="text-xl font-bold tracking-tighter text-blue-900">Ledger</span>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="hidden md:flex items-center gap-8 font-manrope text-sm font-semibold tracking-tight">
+                <a class="text-blue-700 font-bold" href="/">Overview</a>
+                <a class="text-slate-500 hover:bg-slate-100 transition-colors px-2 py-1 rounded" href="/transactions.html">Transactions</a>
+                <a class="text-slate-500 hover:bg-slate-100 transition-colors px-2 py-1 rounded" href="/accounts.html">Accounts</a>
             </div>
-        </nav>
-
-        <main>
-            <!-- Auth Section -->
-            <section x-show="!token" x-transition.opacity.duration.400ms>
-                <div class="auth-container">
-                    <div class="auth-card glass">
-                        <div class="auth-header">
-                            <h1 x-text="authMode === 'login' ? 'Welcome Back' : 'Join Us'"></h1>
-                            <p
-                                x-text="authMode === 'login' ? 'Login to track your finances' : 'Create an account to start tracking'">
-                            </p>
-                        </div>
-
-                        <!-- Login Form -->
-                        <div x-show="authMode === 'login'" x-transition.opacity>
-                            <form @submit.prevent="handleLogin()" id="login-form">
-                                <div class="form-group">
-                                    <label for="login-email">Email</label>
-                                    <input type="email" id="login-email" x-model="loginEmail"
-                                        placeholder="name@example.com" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="login-password">Password</label>
-                                    <input type="password" id="login-password" x-model="loginPassword"
-                                        placeholder="••••••••" required>
-                                </div>
-                                <button type="submit" class="btn primary-btn" :disabled="authLoading">
-                                    <span x-text="authLoading ? 'Logging in...' : 'Login'"></span>
-                                </button>
-                            </form>
-                            <p class="auth-footer">Don't have an account?
-                                <span @click="authMode = 'signup'">Sign Up</span>
-                            </p>
-                        </div>
-
-                        <!-- Signup Form -->
-                        <div x-show="authMode === 'signup'" x-transition.opacity>
-                            <form @submit.prevent="handleSignup()" id="signup-form">
-                                <div class="form-group">
-                                    <label for="signup-name">Full Name</label>
-                                    <input type="text" id="signup-name" x-model="signupName" placeholder="John Doe"
-                                        required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="signup-email">Email</label>
-                                    <input type="email" id="signup-email" x-model="signupEmail"
-                                        placeholder="name@example.com" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="signup-password">Password</label>
-                                    <input type="password" id="signup-password" x-model="signupPassword"
-                                        placeholder="••••••••" required>
-                                </div>
-                                <button type="submit" class="btn primary-btn" :disabled="authLoading">
-                                    <span x-text="authLoading ? 'Creating...' : 'Sign Up'"></span>
-                                </button>
-                            </form>
-                            <p class="auth-footer">Already have an account?
-                                <span @click="authMode = 'login'">Login</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Dashboard Section -->
-            <section x-show="token && view === 'dashboard'" x-transition.opacity.duration.300ms>
-                <div class="dashboard-header">
-                    <h2>Your Records</h2>
-                    <button class="btn primary-btn" @click="openAddModal()">+ Add Record</button>
-                </div>
-
-                <!-- Filter Bar -->
-                <div class="filter-bar">
-                    <button class="filter-btn" :class="{ active: filter === 'all' }"
-                        @click="filter = 'all'">All</button>
-                    <button class="filter-btn" :class="{ active: filter === 'income' }"
-                        @click="filter = 'income'">Income</button>
-                    <button class="filter-btn" :class="{ active: filter === 'expense' }"
-                        @click="filter = 'expense'">Expenses</button>
-                </div>
-
-                <!-- Skeleton Loading -->
-                <div x-show="loading">
-                    <div class="skeleton skeleton-card"></div>
-                    <div class="skeleton skeleton-card"></div>
-                    <div class="skeleton skeleton-card"></div>
-                </div>
-
-                <!-- Records List -->
-                <div x-show="!loading" class="records-grid">
-                    <template x-for="(record, idx) in filteredRecords" :key="record.id">
-                        <div class="record-card" :class="record.amount >= 0 ? 'income' : 'expense'"
-                            :style="'animation-delay:' + (idx * 0.05) + 's'">
-                            <div class="record-icon" x-text="record.amount >= 0 ? '↑' : '↓'"></div>
-                            <div class="record-info">
-                                <div class="record-description" x-text="record.description"></div>
-                                <div class="record-date" x-text="formatDate(record)"></div>
-                            </div>
-                            <div class="record-amount" :class="record.amount >= 0 ? 'positive' : 'negative'"
-                                x-text="formatAmount(record.amount)"></div>
-                            <div class="record-currency" x-text="record.currency"></div>
-                            <div class="record-actions">
-                                <button class="icon-btn edit-btn" @click="openEditModal(record)">✎</button>
-                                <button class="icon-btn delete-btn" @click="deleteRecord(record.id)">🗑</button>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-
-                <!-- Empty State -->
-                <div x-show="!loading && filteredRecords.length === 0" class="empty-state">
-                    <div class="empty-state-icon">📊</div>
-                    <h3 x-text="filter === 'all' ? 'No records yet' : 'No ' + filter + ' records'"></h3>
-                    <p>Start by adding your first record!</p>
-                </div>
-            </section>
-
-            <!-- Statistics Section -->
-            <section x-show="token && view === 'stats'" x-transition.opacity.duration.300ms>
-                <div class="stats-header">
-                    <h2>Financial Summary</h2>
-                </div>
-
-                <!-- Quick Stats Row -->
-                <div class="quick-stats" style="margin-bottom: 1.25rem;">
-                    <div class="quick-stat glass">
-                        <div class="quick-stat-value text-success" x-text="formatStatsCurrency(totalIncome)"></div>
-                        <div class="quick-stat-label">Total Income</div>
-                    </div>
-                    <div class="quick-stat glass">
-                        <div class="quick-stat-value text-danger" x-text="formatStatsCurrency(totalExpense)"></div>
-                        <div class="quick-stat-label">Total Expenses</div>
-                    </div>
-                    <div class="quick-stat glass">
-                        <div class="quick-stat-value" :class="netBalance >= 0 ? 'text-success' : 'text-danger'"
-                            x-text="formatStatsCurrency(netBalance)"></div>
-                        <div class="quick-stat-label">Net Balance</div>
-                    </div>
-                </div>
-                <p x-show="isMixedCurrency"
-                    style="text-align:center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">*
-                    Values converted to <span x-text="statsCurrency"></span> (mixed currencies detected)</p>
-
-                <div class="stats-grid">
-                    <div class="stat-card glass">
-                        <h3>Income vs Expenses</h3>
-                        <div class="chart-container">
-                            <canvas id="incomeExpenseChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="stat-card glass">
-                        <h3>Monthly Trend</h3>
-                        <div class="chart-container">
-                            <canvas id="monthlyTrendChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Record Modal -->
-        <div x-show="showModal" x-transition.opacity class="modal" @click.self="showModal = false">
-            <div class="modal-content glass">
-                <div class="modal-header">
-                    <h2 x-text="editingId ? 'Edit Record' : 'Add New Record'"></h2>
-                    <span class="close-modal" @click="showModal = false">&times;</span>
-                </div>
-                <form @submit.prevent="saveRecord()">
-                    <div class="form-group">
-                        <label for="record-description">Description</label>
-                        <input type="text" id="record-description" x-model="form.description"
-                            placeholder="Lunch, Salary, Rent..." required>
-                    </div>
-
-                    <!-- Type Toggle -->
-                    <div class="type-toggle">
-                        <button type="button" class="type-toggle-btn"
-                            :class="{ 'active-income': form.type === 'income' }" @click="form.type = 'income'">↑
-                            Income</button>
-                        <button type="button" class="type-toggle-btn"
-                            :class="{ 'active-expense': form.type === 'expense' }" @click="form.type = 'expense'">↓
-                            Expense</button>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="record-amount">Amount</label>
-                            <input type="number" id="record-amount" x-model="form.amount" step="any" placeholder="0.00"
-                                required inputmode="decimal">
-                        </div>
-                        <div class="form-group">
-                            <label for="record-currency">Currency</label>
-                            <select id="record-currency" x-model="form.currency">
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
-                                <option value="UAH">UAH</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn primary-btn" :disabled="saving">
-                        <span x-text="saving ? 'Saving...' : 'Save Record'"></span>
-                    </button>
-                </form>
+            <div class="flex items-center gap-3">
+                <button onclick="logout()" class="p-2 text-slate-500 hover:bg-slate-100 transition-colors active:scale-95 duration-200" title="Logout">
+                    <span class="material-symbols-outlined">logout</span>
+                </button>
             </div>
         </div>
+    </header>
 
-        <!-- Toast Container -->
-        <div id="toast-container"></div>
+    <div class="flex min-h-screen pt-16">
+        <!-- SideNavBar -->
+        <aside class="hidden lg:flex flex-col h-screen w-64 border-r-0 bg-slate-50 py-6 font-manrope text-sm font-medium sticky top-16">
+            <div class="px-6 mb-8">
+                <h1 class="text-lg font-extrabold text-blue-950 uppercase tracking-widest">The Ledger</h1>
+                <p class="text-xs text-slate-500">Architectural Finance</p>
+            </div>
+            <nav class="flex-1 space-y-1">
+                <a class="bg-blue-900 text-white rounded-lg mx-2 my-1 px-4 py-2 flex items-center gap-3 transition-all duration-300 ease-in-out" href="/">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Overview</span>
+                </a>
+                <a class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out" href="/transactions.html">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                    <span>Transactions</span>
+                </a>
+                <a class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out" href="/accounts.html">
+                    <span class="material-symbols-outlined">account_balance</span>
+                    <span>Accounts</span>
+                </a>
+            </nav>
+            <div class="px-4 mb-6">
+                <a href="/add-record.html"
+                    class="w-full bg-primary text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform block text-center">
+                    <span class="material-symbols-outlined text-sm">add</span>
+                    Add Transaction
+                </a>
+            </div>
+            <div class="mt-auto pt-6 border-t border-slate-200/50">
+                <a onclick="logout()" class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out cursor-pointer">
+                    <span class="material-symbols-outlined">logout</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 px-6 lg:px-12 py-8 bg-surface overflow-x-hidden page-enter">
+            <!-- Header Section -->
+            <section class="mb-12">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-4xl font-headline font-extrabold tracking-tight text-on-surface mb-2">Portfolio Overview</h2>
+                        <p class="text-on-surface-variant font-medium" id="date-range">Loading...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bento Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+                <!-- Total Balance Card -->
+                <div class="md:col-span-8 bg-primary-container text-white p-8 rounded-[2rem] relative overflow-hidden flex flex-col justify-between min-h-[320px]">
+                    <div class="relative z-10">
+                        <p class="text-on-primary-container font-headline font-bold uppercase tracking-[0.2em] text-xs mb-4">Current Liquidity</p>
+                        <h3 id="total-balance" class="text-6xl font-headline font-extrabold tracking-tighter">
+                            <span class="skeleton inline-block w-64 h-16"></span>
+                        </h3>
+                        <div class="mt-4 flex items-center gap-2 text-tertiary-fixed" id="balance-trend">
+                        </div>
+                    </div>
+                    <div class="relative z-10 flex gap-4 mt-8">
+                        <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl flex-1">
+                            <p class="text-xs text-on-primary-container font-bold uppercase mb-1">Income</p>
+                            <p class="text-xl font-bold" id="total-income">—</p>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl flex-1">
+                            <p class="text-xs text-on-primary-container font-bold uppercase mb-1">Expenses</p>
+                            <p class="text-xl font-bold" id="total-expenses">—</p>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl flex-1">
+                            <p class="text-xs text-on-primary-container font-bold uppercase mb-1">Records</p>
+                            <p class="text-xl font-bold" id="total-records">—</p>
+                        </div>
+                    </div>
+                    <div class="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
+                        <div class="absolute inset-0 bg-gradient-to-l from-primary-container to-transparent z-10"></div>
+                    </div>
+                </div>
+
+                <!-- Top Spending -->
+                <div class="md:col-span-4 bg-surface-container-low p-8 rounded-[2rem] flex flex-col">
+                    <div class="flex justify-between items-start mb-8">
+                        <h4 class="font-headline font-bold text-xl">Top Spending</h4>
+                    </div>
+                    <div class="space-y-6 flex-1 flex flex-col justify-center" id="top-spending">
+                        <div class="skeleton w-full h-8 mb-2"></div>
+                        <div class="skeleton w-full h-8 mb-2"></div>
+                        <div class="skeleton w-full h-8"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="md:col-span-12 flex flex-col gap-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-headline font-bold text-xl">Recent Activity</h4>
+                        <a class="text-xs font-bold text-primary uppercase tracking-wider underline decoration-tertiary-fixed decoration-2 underline-offset-4" href="/transactions.html">View All</a>
+                    </div>
+                    <div class="space-y-4" id="recent-transactions">
+                        <div class="skeleton w-full h-20 mb-2"></div>
+                        <div class="skeleton w-full h-20 mb-2"></div>
+                        <div class="skeleton w-full h-20"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Mobile Nav -->
+    <nav class="md:hidden fixed bottom-0 w-full bg-slate-50/90 backdrop-blur-lg border-t-0 py-3 px-6 flex justify-between items-center z-50 shadow-2xl">
+        <a href="/" class="flex flex-col items-center gap-1 text-blue-700">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+            <span class="text-[10px] font-bold uppercase tracking-tighter">Home</span>
+        </a>
+        <a href="/transactions.html" class="flex flex-col items-center gap-1 text-slate-500">
+            <span class="material-symbols-outlined">receipt_long</span>
+            <span class="text-[10px] font-bold uppercase tracking-tighter">History</span>
+        </a>
+        <a href="/add-record.html" class="bg-primary-container p-4 rounded-full -mt-10 shadow-lg active:scale-90 transition-transform">
+            <span class="material-symbols-outlined text-white">add</span>
+        </a>
+        <a href="/accounts.html" class="flex flex-col items-center gap-1 text-slate-500">
+            <span class="material-symbols-outlined">account_balance</span>
+            <span class="text-[10px] font-bold uppercase tracking-tighter">Bank</span>
+        </a>
+        <a onclick="logout()" class="flex flex-col items-center gap-1 text-slate-500 cursor-pointer">
+            <span class="material-symbols-outlined">logout</span>
+            <span class="text-[10px] font-bold uppercase tracking-tighter">Exit</span>
+        </a>
+    </nav>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+
+        const SPENDING_COLORS = ['bg-primary', 'bg-tertiary-fixed-dim', 'bg-on-secondary-container', 'bg-outline', 'bg-error'];
+
+        async function loadDashboard() {
+            try {
+                const records = await apiGetRecords();
+
+                // Compute stats
+                let totalIncome = 0, totalExpenses = 0;
+                const categorySpending = {};
+
+                records.forEach(r => {
+                    const amt = r.amount;
+                    if (r.type === 'income' || amt > 0) {
+                        totalIncome += Math.abs(amt);
+                    } else {
+                        totalExpenses += Math.abs(amt);
+                    }
+                    // Category tracking for expenses
+                    if (r.type !== 'income' && amt <= 0) {
+                        const cat = getCategoryName(r.description);
+                        categorySpending[cat] = (categorySpending[cat] || 0) + Math.abs(amt);
+                    }
+                });
+
+                const balance = totalIncome - totalExpenses;
+
+                // Update UI
+                document.getElementById('total-balance').textContent = `₴${balance.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                document.getElementById('total-income').textContent = `₴${totalIncome.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                document.getElementById('total-expenses').textContent = `₴${totalExpenses.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                document.getElementById('total-records').textContent = records.length;
+
+                // Date range
+                if (records.length > 0) {
+                    const dates = records.filter(r => r.created_at).map(r => new Date(r.created_at)).sort((a, b) => a - b);
+                    if (dates.length > 0) {
+                        document.getElementById('date-range').textContent = `${formatDate(dates[0])} — ${formatDate(dates[dates.length - 1])}`;
+                    }
+                } else {
+                    document.getElementById('date-range').textContent = 'No records yet';
+                }
+
+                // Top spending
+                const sorted = Object.entries(categorySpending).sort((a, b) => b[1] - a[1]).slice(0, 4);
+                const maxSpend = sorted.length > 0 ? sorted[0][1] : 1;
+                const spendingHtml = sorted.length > 0 ? sorted.map(([cat, amount], i) => `
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm font-bold">
+                            <span>${cat}</span>
+                            <span>₴${amount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div class="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                            <div class="h-full ${SPENDING_COLORS[i] || 'bg-outline'} rounded-full transition-all duration-700" style="width: ${Math.round((amount / maxSpend) * 100)}%"></div>
+                        </div>
+                    </div>
+                `).join('') : '<p class="text-on-surface-variant text-sm text-center">No expenses yet</p>';
+                document.getElementById('top-spending').innerHTML = spendingHtml;
+
+                // Recent transactions (last 5)
+                const recent = records
+                    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                    .slice(0, 5);
+
+                const txHtml = recent.length > 0 ? recent.map(r => {
+                    const isIncome = r.type === 'income' || r.amount > 0;
+                    const icon = getCategoryIcon(r.description);
+                    const amountStr = isIncome
+                        ? `+₴${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`
+                        : `-₴${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                    const amountClass = isIncome ? 'text-on-tertiary-container' : 'text-on-surface';
+                    const isMono = r.mono_card_id ? true : false;
+
+                    return `
+                    <div class="group flex items-center gap-4 p-4 bg-surface hover:bg-surface-container-low rounded-2xl transition-all duration-200 cursor-pointer">
+                        <div class="w-12 h-12 ${isIncome ? 'bg-on-tertiary-container/10' : 'bg-surface-container-highest'} rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined ${isIncome ? 'text-on-tertiary-container' : 'text-primary'}">${icon}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-on-surface truncate">${r.description}</p>
+                            <p class="text-xs text-on-surface-variant">${r.created_at ? timeAgo(r.created_at) : ''} • ${getCategoryName(r.description)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-extrabold ${amountClass}">${amountStr}</p>
+                            ${isMono ? '<p class="text-[10px] font-bold text-on-tertiary-container flex items-center gap-1 justify-end"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings: \'FILL\' 1;">sync</span> Synced</p>' : '<p class="text-[10px] font-bold text-on-surface-variant flex items-center gap-1 justify-end">Manual</p>'}
+                        </div>
+                    </div>`;
+                }).join('') : `
+                    <div class="empty-state">
+                        <span class="material-symbols-outlined text-6xl text-outline mb-4">receipt_long</span>
+                        <h4 class="font-headline font-bold text-lg text-primary mb-2">No transactions yet</h4>
+                        <p class="text-on-surface-variant text-sm mb-6">Add your first record or sync with Monobank</p>
+                        <a href="/add-record.html" class="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold text-sm hover:scale-105 transition-transform">Add Transaction</a>
+                    </div>`;
+
+                document.getElementById('recent-transactions').innerHTML = txHtml;
+
+            } catch (err) {
+                console.error('Dashboard load error:', err);
+                showToast('Failed to load dashboard data', 'error');
+            }
+        }
+
+        loadDashboard();
+    </script>
 </body>
 
 </html>

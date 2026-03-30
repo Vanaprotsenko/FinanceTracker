@@ -1,4 +1,3 @@
-
 from src.models.user import User
 from src.repositories.base import Repository
 
