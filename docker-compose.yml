@@ -4,44 +4,28 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - 8000:80
+      - "${API_PORT}:${API_INTERNAL_PORT}"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/db
+      - DATABASE_URL=${DATABASE_URL}
       - RUN_MIGRATIONS=1
     env_file:
       - .env
-    volumes:
-      - .:/code
     depends_on:
       db:
         condition: service_healthy
 
-#  telegram-bot:
-#    build:
-#      context: ./
-#      dockerfile: Dockerfile
-#    command: python /code/src/bot/bot.py
-#    environment:
-#      - DATABASE_URL=postgresql://postgres:postgres@db:5432/db
-#      - RUN_MIGRATIONS=0
-#    env_file:
-#      - .env
-#    depends_on:
-#      db:
-#        condition: service_healthy
-
   db:
     image: postgres:16-alpine
     ports:
-      - 5432:5432
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - db_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
       interval: 5s
       timeout: 5s
       retries: 5
