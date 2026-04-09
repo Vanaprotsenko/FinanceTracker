@@ -124,7 +124,11 @@
                         <h3 id="total-balance" class="text-6xl font-headline font-extrabold tracking-tighter">
                             <span class="skeleton inline-block w-64 h-16"></span>
                         </h3>
-                        <div class="mt-4 flex items-center gap-2 text-tertiary-fixed" id="balance-trend">
+                        <!-- Currency Toggle Buttons -->
+                        <div id="currency-toggle" class="mt-4 flex items-center gap-2 flex-wrap" style="display:none;">
+                            <span class="text-[10px] text-on-primary-container/60 font-bold uppercase tracking-widest mr-1">Show in:</span>
+                        </div>
+                        <div class="mt-3 flex items-center gap-2 text-tertiary-fixed" id="balance-trend">
                         </div>
                     </div>
                     <div class="relative z-10 flex gap-4 mt-8">
@@ -203,54 +207,177 @@
 
         const SPENDING_COLORS = ['bg-primary', 'bg-tertiary-fixed-dim', 'bg-on-secondary-container', 'bg-outline', 'bg-error'];
 
+        let dashRecords = [];
+        let selectedDisplayCurrency = null; // null = show original per-currency breakdown
+
         async function loadDashboard() {
             try {
-                const records = await apiGetRecords();
+                dashRecords = await apiGetRecords();
+                renderDashboard();
+            } catch (err) {
+                console.error('Dashboard load error:', err);
+                showToast('Failed to load dashboard data', 'error');
+            }
+        }
 
-                // Compute stats
-                let totalIncome = 0, totalExpenses = 0;
-                const categorySpending = {};
+        async function setDisplayCurrency(curr) {
+            selectedDisplayCurrency = curr;
+            if (curr) {
+                // Show loading state
+                document.getElementById('total-balance').innerHTML = '<span class="skeleton inline-block w-48 h-10"></span>';
+                const rates = await fetchExchangeRates(curr);
+                if (!rates) {
+                    showToast('Failed to fetch exchange rates', 'error');
+                    selectedDisplayCurrency = null;
+                }
+            }
+            renderDashboard();
+        }
 
-                records.forEach(r => {
-                    const amt = r.amount;
-                    if (r.type === 'income' || amt > 0) {
-                        totalIncome += Math.abs(amt);
-                    } else {
-                        totalExpenses += Math.abs(amt);
-                    }
-                    // Category tracking for expenses
-                    if (r.type !== 'income' && amt <= 0) {
-                        const cat = getCategoryName(r.description);
-                        categorySpending[cat] = (categorySpending[cat] || 0) + Math.abs(amt);
-                    }
+        async function renderDashboard() {
+            const records = dashRecords;
+            if (!records.length && !records) return;
+
+            // Detect all currencies in records
+            const allCurrencies = [...new Set(records.map(r => (r.currency || 'UAH').toUpperCase()))];
+            const isMultiCurrency = allCurrencies.length > 1;
+
+            // Build currency toggle buttons (only if multi-currency)
+            const toggleContainer = document.getElementById('currency-toggle');
+            if (isMultiCurrency) {
+                toggleContainer.style.display = 'flex';
+                let btnsHtml = '<span class="text-[10px] text-on-primary-container/60 font-bold uppercase tracking-widest mr-1">Show in:</span>';
+
+                // "Original" button
+                const origActive = !selectedDisplayCurrency;
+                btnsHtml += `<button onclick="setDisplayCurrency(null)" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold tracking-wide transition-all duration-200 ${
+                    origActive 
+                        ? 'bg-white text-primary-container shadow-md scale-105' 
+                        : 'bg-white/15 text-white/80 hover:bg-white/25 hover:scale-105'
+                }">Original</button>`;
+
+                // Per-currency buttons
+                allCurrencies.forEach(c => {
+                    const sym = getCurrencySymbol(c);
+                    const isActive = selectedDisplayCurrency === c;
+                    btnsHtml += `<button onclick="setDisplayCurrency('${c}')" class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold tracking-wide transition-all duration-200 ${
+                        isActive 
+                            ? 'bg-white text-primary-container shadow-md scale-105' 
+                            : 'bg-white/15 text-white/80 hover:bg-white/25 hover:scale-105'
+                    }">${sym} ${c}</button>`;
                 });
 
-                const balance = totalIncome - totalExpenses;
+                toggleContainer.innerHTML = btnsHtml;
+            } else {
+                toggleContainer.style.display = 'none';
+            }
 
-                // Update UI
-                document.getElementById('total-balance').textContent = `₴${balance.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
-                document.getElementById('total-income').textContent = `₴${totalIncome.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
-                document.getElementById('total-expenses').textContent = `₴${totalExpenses.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
-                document.getElementById('total-records').textContent = records.length;
+            // Get rates if converting
+            let rates = null;
+            if (selectedDisplayCurrency) {
+                rates = await fetchExchangeRates(selectedDisplayCurrency);
+            }
 
-                // Date range
-                if (records.length > 0) {
-                    const dates = records.filter(r => r.created_at).map(r => new Date(r.created_at)).sort((a, b) => a - b);
-                    if (dates.length > 0) {
-                        document.getElementById('date-range').textContent = `${formatDate(dates[0])} — ${formatDate(dates[dates.length - 1])}`;
-                    }
-                } else {
-                    document.getElementById('date-range').textContent = 'No records yet';
+            // Compute stats
+            let totalIncome = 0, totalExpenses = 0;
+            const categorySpending = {};
+
+            records.forEach(r => {
+                const amt = r.amount;
+                const curr = (r.currency || 'UAH').toUpperCase();
+                let absAmt = Math.abs(amt);
+
+                if (selectedDisplayCurrency && rates) {
+                    absAmt = Math.abs(convertAmount(amt, curr, selectedDisplayCurrency, rates));
                 }
 
-                // Top spending
+                if (r.type === 'income' || amt > 0) {
+                    totalIncome += absAmt;
+                } else {
+                    totalExpenses += absAmt;
+                }
+
+                if (r.type !== 'income' && amt <= 0) {
+                    const cat = getCategoryName(r.description);
+                    categorySpending[cat] = (categorySpending[cat] || 0) + absAmt;
+                }
+            });
+
+            const displaySym = selectedDisplayCurrency ? getCurrencySymbol(selectedDisplayCurrency) : null;
+
+            // Balance display
+            const balEl = document.getElementById('total-balance');
+            if (selectedDisplayCurrency) {
+                // Single converted currency
+                const balance = totalIncome - totalExpenses;
+                balEl.textContent = `${displaySym}${balance.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                balEl.className = 'text-6xl font-headline font-extrabold tracking-tighter';
+            } else {
+                // Original multi-currency breakdown
+                const statsByCurrency = {};
+                records.forEach(r => {
+                    const curr = (r.currency || 'UAH').toUpperCase();
+                    if (!statsByCurrency[curr]) statsByCurrency[curr] = { income: 0, expenses: 0 };
+                    if (r.type === 'income' || r.amount > 0) statsByCurrency[curr].income += Math.abs(r.amount);
+                    else statsByCurrency[curr].expenses += Math.abs(r.amount);
+                });
+                const curs = Object.keys(statsByCurrency);
+                const balanceStr = curs.map(c => {
+                    const sym = getCurrencySymbol(c);
+                    const bal = statsByCurrency[c].income - statsByCurrency[c].expenses;
+                    return `${sym}${bal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                }).join(curs.length > 1 ? '  \u00b7  ' : '');
+                balEl.textContent = balanceStr;
+                balEl.className = (curs.length > 1 ? 'text-4xl' : 'text-6xl') + ' font-headline font-extrabold tracking-tighter';
+            }
+
+            // Income / Expenses / Records
+            const fmtVal = (val) => {
+                const sym = displaySym || '₴';
+                return `${sym}${val.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+            };
+
+            if (selectedDisplayCurrency) {
+                document.getElementById('total-income').textContent = fmtVal(totalIncome);
+                document.getElementById('total-expenses').textContent = fmtVal(totalExpenses);
+            } else {
+                // Per-currency breakdown for income/expenses
+                const statsByCurrency = {};
+                records.forEach(r => {
+                    const curr = (r.currency || 'UAH').toUpperCase();
+                    if (!statsByCurrency[curr]) statsByCurrency[curr] = { income: 0, expenses: 0 };
+                    if (r.type === 'income' || r.amount > 0) statsByCurrency[curr].income += Math.abs(r.amount);
+                    else statsByCurrency[curr].expenses += Math.abs(r.amount);
+                });
+                const curs = Object.keys(statsByCurrency);
+                const incStr = curs.map(c => `${getCurrencySymbol(c)}${statsByCurrency[c].income.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`).join('  \u00b7  ');
+                const expStr = curs.map(c => `${getCurrencySymbol(c)}${statsByCurrency[c].expenses.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`).join('  \u00b7  ');
+                document.getElementById('total-income').textContent = incStr;
+                document.getElementById('total-expenses').textContent = expStr;
+            }
+            document.getElementById('total-records').textContent = records.length;
+
+            // Date range
+            if (records.length > 0) {
+                const dates = records.filter(r => r.created_at).map(r => new Date(r.created_at)).sort((a, b) => a - b);
+                if (dates.length > 0) {
+                    document.getElementById('date-range').textContent = `${formatDate(dates[0])} \u2014 ${formatDate(dates[dates.length - 1])}`;
+                }
+            } else {
+                document.getElementById('date-range').textContent = 'No records yet';
+            }
+
+            // Top spending
+            if (selectedDisplayCurrency) {
+                // Simple single-currency view when converting
                 const sorted = Object.entries(categorySpending).sort((a, b) => b[1] - a[1]).slice(0, 4);
                 const maxSpend = sorted.length > 0 ? sorted[0][1] : 1;
+                const sym = getCurrencySymbol(selectedDisplayCurrency);
                 const spendingHtml = sorted.length > 0 ? sorted.map(([cat, amount], i) => `
                     <div class="space-y-2">
                         <div class="flex justify-between text-sm font-bold">
                             <span>${cat}</span>
-                            <span>₴${amount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</span>
+                            <span>${sym}${amount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div class="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden">
                             <div class="h-full ${SPENDING_COLORS[i] || 'bg-outline'} rounded-full transition-all duration-700" style="width: ${Math.round((amount / maxSpend) * 100)}%"></div>
@@ -258,52 +385,105 @@
                     </div>
                 `).join('') : '<p class="text-on-surface-variant text-sm text-center">No expenses yet</p>';
                 document.getElementById('top-spending').innerHTML = spendingHtml;
-
-                // Recent transactions (last 5)
-                const recent = records
-                    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-                    .slice(0, 5);
-
-                const txHtml = recent.length > 0 ? recent.map(r => {
-                    const isIncome = r.type === 'income' || r.amount > 0;
-                    const icon = getCategoryIcon(r.description);
-                    const amountStr = isIncome
-                        ? `+₴${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`
-                        : `-₴${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
-                    const amountClass = isIncome ? 'text-on-tertiary-container' : 'text-on-surface';
-                    const isMono = r.mono_card_id ? true : false;
-
+            } else {
+                // Original mode: per-currency breakdown in spending
+                const catByCurr = {};
+                records.forEach(r => {
+                    if (r.type !== 'income' && r.amount <= 0) {
+                        const cat = getCategoryName(r.description);
+                        const curr = (r.currency || 'UAH').toUpperCase();
+                        if (!catByCurr[cat]) catByCurr[cat] = { total: 0, byCurr: {} };
+                        const absAmt = Math.abs(r.amount);
+                        catByCurr[cat].total += absAmt;
+                        catByCurr[cat].byCurr[curr] = (catByCurr[cat].byCurr[curr] || 0) + absAmt;
+                    }
+                });
+                const sorted = Object.entries(catByCurr).sort((a, b) => b[1].total - a[1].total).slice(0, 4);
+                const maxSpend = sorted.length > 0 ? sorted[0][1].total : 1;
+                const spendingHtml = sorted.length > 0 ? sorted.map(([cat, data], i) => {
+                    const amtParts = Object.entries(data.byCurr).map(([c, v]) => `${getCurrencySymbol(c)}${v.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`);
                     return `
-                    <div class="group flex items-center gap-4 p-4 bg-surface hover:bg-surface-container-low rounded-2xl transition-all duration-200 cursor-pointer">
-                        <div class="w-12 h-12 ${isIncome ? 'bg-on-tertiary-container/10' : 'bg-surface-container-highest'} rounded-full flex items-center justify-center">
-                            <span class="material-symbols-outlined ${isIncome ? 'text-on-tertiary-container' : 'text-primary'}">${icon}</span>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm font-bold">
+                            <span>${cat}</span>
+                            <span>${amtParts.join(' + ')}</span>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-on-surface truncate">${r.description}</p>
-                            <p class="text-xs text-on-surface-variant">${r.created_at ? timeAgo(r.created_at) : ''} • ${getCategoryName(r.description)}</p>
+                        <div class="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                            <div class="h-full ${SPENDING_COLORS[i] || 'bg-outline'} rounded-full transition-all duration-700" style="width: ${Math.round((data.total / maxSpend) * 100)}%"></div>
                         </div>
-                        <div class="text-right">
-                            <p class="font-extrabold ${amountClass}">${amountStr}</p>
+                    </div>`;
+                }).join('') : '<p class="text-on-surface-variant text-sm text-center">No expenses yet</p>';
+                document.getElementById('top-spending').innerHTML = spendingHtml;
+            }
+
+            // Recent transactions (last 5)
+            const recent = [...records]
+                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                .slice(0, 5);
+
+            const txHtml = recent.length > 0 ? recent.map(r => {
+                const isIncome = r.type === 'income' || r.amount > 0;
+                const icon = getCategoryIcon(r.description);
+                const currSym = getCurrencySymbol(r.currency) || r.currency || '₴';
+                const currCode = (r.currency || 'UAH').toUpperCase();
+                const showCurrBadge = currCode !== 'UAH' && !selectedDisplayCurrency;
+
+                let displayAmt = r.amount;
+                let displaySymbol = currSym;
+                if (selectedDisplayCurrency && rates) {
+                    displayAmt = convertAmount(r.amount, currCode, selectedDisplayCurrency, rates);
+                    displaySymbol = getCurrencySymbol(selectedDisplayCurrency);
+                }
+
+                const amountStr = isIncome
+                    ? `+${displaySymbol}${Math.abs(displayAmt).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`
+                    : `-${displaySymbol}${Math.abs(displayAmt).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                const amountClass = isIncome ? 'text-on-tertiary-container' : 'text-on-surface';
+                const isMono = r.mono_card_id ? true : false;
+
+                return `
+                <div class="group flex items-center gap-4 p-4 bg-surface hover:bg-surface-container-low rounded-2xl transition-all duration-200 cursor-pointer">
+                    <div class="w-12 h-12 ${isIncome ? 'bg-on-tertiary-container/10' : 'bg-surface-container-highest'} rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined ${isIncome ? 'text-on-tertiary-container' : 'text-primary'}">${icon}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-on-surface truncate">${r.description}</p>
+                        <p class="text-xs text-on-surface-variant">${r.created_at ? timeAgo(r.created_at) : ''} \u2022 ${getCategoryName(r.description)}</p>
+                    </div>
+                    <div class="text-right flex items-center gap-2">
+                        <div>
+                            <p class="font-extrabold ${amountClass}">${amountStr}${showCurrBadge ? ` <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wide bg-white/10 text-on-surface-variant">${currCode}</span>` : ''}</p>
                             ${isMono ? '<p class="text-[10px] font-bold text-on-tertiary-container flex items-center gap-1 justify-end"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings: \'FILL\' 1;">sync</span> Synced</p>' : '<p class="text-[10px] font-bold text-on-surface-variant flex items-center gap-1 justify-end">Manual</p>'}
                         </div>
-                    </div>`;
-                }).join('') : `
-                    <div class="empty-state">
-                        <span class="material-symbols-outlined text-6xl text-outline mb-4">receipt_long</span>
-                        <h4 class="font-headline font-bold text-lg text-primary mb-2">No transactions yet</h4>
-                        <p class="text-on-surface-variant text-sm mb-6">Add your first record or sync with Monobank</p>
-                        <a href="/add-record.html" class="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold text-sm hover:scale-105 transition-transform">Add Transaction</a>
-                    </div>`;
+                        <button onclick="event.stopPropagation(); deleteDashboardTransaction('${r.id}')" class="p-1.5 rounded-full text-on-surface-variant/30 hover:text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100" title="Delete">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('') : `
+                <div class="empty-state">
+                    <span class="material-symbols-outlined text-6xl text-outline mb-4">receipt_long</span>
+                    <h4 class="font-headline font-bold text-lg text-primary mb-2">No transactions yet</h4>
+                    <p class="text-on-surface-variant text-sm mb-6">Add your first record or sync with Monobank</p>
+                    <a href="/add-record.html" class="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold text-sm hover:scale-105 transition-transform">Add Transaction</a>
+                </div>`;
 
-                document.getElementById('recent-transactions').innerHTML = txHtml;
-
-            } catch (err) {
-                console.error('Dashboard load error:', err);
-                showToast('Failed to load dashboard data', 'error');
-            }
+            document.getElementById('recent-transactions').innerHTML = txHtml;
         }
 
         loadDashboard();
+
+        async function deleteDashboardTransaction(id) {
+            if (!confirm('Are you sure you want to delete this transaction?')) return;
+            try {
+                await apiDeleteRecord(id);
+                dashRecords = dashRecords.filter(r => r.id !== id);
+                renderDashboard();
+                showToast('Transaction deleted');
+            } catch (err) {
+                showToast('Failed to delete transaction', 'error');
+            }
+        }
     </script>
 </body>
 

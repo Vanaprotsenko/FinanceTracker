@@ -106,7 +106,7 @@
         <div class="mt-16 px-6 lg:px-12 py-10 flex flex-col gap-10 page-enter">
             <!-- Filters Section -->
             <section class="bg-surface-container-low p-6 rounded-2xl flex flex-col gap-4">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 w-full">
                     <div class="flex flex-col gap-1.5">
                         <label class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/70 px-1">Type</label>
                         <select id="filter-type" onchange="filterTransactions()"
@@ -130,6 +130,13 @@
                             <option value="">All Sources</option>
                             <option value="mono">Monobank</option>
                             <option value="manual">Manual</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/70 px-1">Currency</label>
+                        <select id="filter-currency" onchange="filterTransactions()"
+                            class="bg-surface-container-lowest border-none rounded-lg text-sm py-2.5 px-3 focus:ring-surface-tint/20 font-medium">
+                            <option value="">All Currencies</option>
                         </select>
                     </div>
                     <div class="flex flex-col gap-1.5">
@@ -166,10 +173,14 @@
 
             <!-- Transactions List -->
             <section class="flex flex-col gap-2">
-                <div class="flex items-baseline justify-between mb-4">
+                <div class="flex items-center gap-4">
                     <h2 class="text-2xl font-extrabold text-primary font-headline tracking-tight">All Transactions</h2>
                     <span id="tx-count" class="text-label-sm text-on-surface-variant font-medium">Loading...</span>
                 </div>
+                <button id="delete-all-btn" onclick="deleteAllTransactions()" class="hidden text-xs font-bold text-error bg-error/10 hover:bg-error/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200 hover:scale-105 active:scale-95">
+                    <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                    Delete All
+                </button>
 
                 <!-- Column Headers -->
                 <div class="hidden md:grid grid-cols-12 px-6 py-3 text-[10px] uppercase tracking-[0.15em] font-bold text-on-surface-variant/60">
@@ -246,6 +257,17 @@
                     catSelect.appendChild(opt);
                 });
 
+                // Populate currency filter
+                const currSet = new Set(allRecords.map(r => (r.currency || 'UAH').toUpperCase()));
+                const currSelect = document.getElementById('filter-currency');
+                currSet.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    const sym = getCurrencySymbol(c);
+                    opt.textContent = `${sym} ${c}`;
+                    currSelect.appendChild(opt);
+                });
+
                 filterTransactions();
             } catch (err) {
                 console.error('Load transactions error:', err);
@@ -273,6 +295,7 @@
             const typeFilter = document.getElementById('filter-type').value;
             const catFilter = document.getElementById('filter-category').value;
             const sourceFilter = document.getElementById('filter-source').value;
+            const currencyFilter = document.getElementById('filter-currency').value;
             const sort = document.getElementById('filter-sort').value;
             const dateFrom = document.getElementById('filter-date-from').value;
             const dateTo = document.getElementById('filter-date-to').value;
@@ -283,6 +306,7 @@
                 if (catFilter && getCategoryName(r.description) !== catFilter) return false;
                 if (sourceFilter === 'mono' && !r.mono_card_id) return false;
                 if (sourceFilter === 'manual' && r.mono_card_id) return false;
+                if (currencyFilter && (r.currency || 'UAH').toUpperCase() !== currencyFilter) return false;
                 // Date range filter
                 if (dateFrom && r.created_at) {
                     const recDate = new Date(r.created_at);
@@ -306,6 +330,19 @@
             else if (sort === 'lowest') filtered.sort((a, b) => Math.abs(a.amount) - Math.abs(b.amount));
 
             document.getElementById('tx-count').textContent = `Showing ${filtered.length} transactions`;
+
+            // Show/hide delete all button
+            const deleteAllBtn = document.getElementById('delete-all-btn');
+            if (filtered.length > 2) {
+                deleteAllBtn.classList.remove('hidden');
+                deleteAllBtn.classList.add('flex');
+            } else {
+                deleteAllBtn.classList.add('hidden');
+                deleteAllBtn.classList.remove('flex');
+            }
+
+            // Store filtered IDs for delete all
+            window._filteredRecordIds = filtered.map(r => r.id);
 
             // Pagination
             const totalPages = Math.ceil(filtered.length / PER_PAGE);
@@ -334,9 +371,12 @@
                 const isIncome = r.type === 'income' || r.amount > 0;
                 const icon = getCategoryIcon(r.description);
                 const cat = getCategoryName(r.description);
+                const currSym = getCurrencySymbol(r.currency) || r.currency || '₴';
                 const amtStr = isIncome
-                    ? `+₴${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`
-                    : `-₴${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                    ? `+${currSym}${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`
+                    : `-${currSym}${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`;
+                const currCode = (r.currency || 'UAH').toUpperCase();
+                const showCurrBadge = currCode !== 'UAH';
                 const isMono = !!r.mono_card_id;
                 const bgClass = i % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container-low';
                 const accentClass = isIncome ? 'bg-on-tertiary-container/20' : 'bg-error/20';
@@ -355,7 +395,10 @@
                         <span class="text-sm font-medium text-on-surface font-body truncate">${r.description}</span>
                         ${isMono ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200"><span class="material-symbols-outlined text-[12px] mr-1" style="font-variation-settings: \'FILL\' 1;">sync</span>MONO</span>' : ''}
                     </div>
-                    <div class="col-span-2 text-right font-headline font-bold ${isIncome ? 'text-on-tertiary-container' : 'text-error'}">${amtStr}</div>
+                    <div class="col-span-2 text-right flex items-center justify-end gap-1.5">
+                        <span class="font-headline font-bold ${isIncome ? 'text-on-tertiary-container' : 'text-error'}">${amtStr}</span>
+                        ${showCurrBadge ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wide bg-surface-tint/10 text-surface-tint border border-surface-tint/20">${currCode}</span>` : ''}
+                    </div>
                     <div class="col-span-1 text-right">
                         <button onclick="deleteTransaction('${r.id}')" class="material-symbols-outlined text-on-surface-variant/40 hover:text-error transition-colors text-lg" title="Delete">delete</button>
                     </div>
@@ -402,6 +445,32 @@
             } catch (err) {
                 showToast('Failed to delete transaction', 'error');
             }
+        }
+
+        async function deleteAllTransactions() {
+            const ids = window._filteredRecordIds || [];
+            if (ids.length === 0) return;
+            if (!confirm(`Delete all ${ids.length} visible transactions? This cannot be undone.`)) return;
+
+            const btn = document.getElementById('delete-all-btn');
+            btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;border-top-color:var(--color-error,#ba1a1a);"></span> Deleting...';
+            btn.disabled = true;
+
+            let deleted = 0;
+            for (const id of ids) {
+                try {
+                    await apiDeleteRecord(id);
+                    deleted++;
+                } catch (err) {
+                    console.error('Failed to delete', id, err);
+                }
+            }
+
+            allRecords = allRecords.filter(r => !ids.includes(r.id));
+            filterTransactions();
+            showToast(`Deleted ${deleted} transactions`);
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm">delete_sweep</span> Delete All';
+            btn.disabled = false;
         }
 
         loadTransactions();

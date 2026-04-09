@@ -209,21 +209,26 @@ async function apiMonoSync(cardId) {
     return resp.json();
 }
 
-// ─── Utility Helpers ────────────────────────────────────────────────
 const CURRENCY_MAP = {
     '980': { symbol: '₴', name: 'UAH' },
     '840': { symbol: '$', name: 'USD' },
     '978': { symbol: '€', name: 'EUR' },
     '826': { symbol: '£', name: 'GBP' },
+    'UAH': { symbol: '₴', name: 'UAH' },
+    'USD': { symbol: '$', name: 'USD' },
+    'EUR': { symbol: '€', name: 'EUR' },
+    'GBP': { symbol: '£', name: 'GBP' },
 };
 
 function getCurrencySymbol(code) {
-    const c = CURRENCY_MAP[String(code)];
+    if (!code) return '₴';
+    const c = CURRENCY_MAP[String(code).toUpperCase()];
     return c ? c.symbol : code;
 }
 
 function getCurrencyName(code) {
-    const c = CURRENCY_MAP[String(code)];
+    if (!code) return 'UAH';
+    const c = CURRENCY_MAP[String(code).toUpperCase()];
     return c ? c.name : String(code);
 }
 
@@ -231,6 +236,34 @@ function formatAmount(amount, currencyCode) {
     const sym = getCurrencySymbol(currencyCode);
     const abs = Math.abs(amount).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return amount < 0 ? `-${sym}${abs}` : `+${sym}${abs}`;
+}
+
+// ─── Exchange Rates (frontend-only, free API) ───────────────────────
+let _ratesCache = {};
+
+async function fetchExchangeRates(baseCurrency) {
+    const base = (baseCurrency || 'UAH').toUpperCase();
+    if (_ratesCache[base]) return _ratesCache[base];
+    try {
+        const resp = await fetch(`https://open.er-api.com/v6/latest/${base}`);
+        if (!resp.ok) throw new Error('Rates API error');
+        const data = await resp.json();
+        _ratesCache[base] = data.rates;
+        return data.rates;
+    } catch (err) {
+        console.error('Failed to fetch exchange rates:', err);
+        return null;
+    }
+}
+
+function convertAmount(amount, fromCurrency, toCurrency, ratesFromTarget) {
+    // ratesFromTarget: rates object where base = toCurrency
+    // To convert FROM -> TO: amount / ratesFromTarget[FROM]
+    const from = (fromCurrency || 'UAH').toUpperCase();
+    const to = (toCurrency || 'UAH').toUpperCase();
+    if (from === to) return amount;
+    if (!ratesFromTarget || !ratesFromTarget[from]) return amount;
+    return amount / ratesFromTarget[from];
 }
 
 function formatDate(dateStr) {
