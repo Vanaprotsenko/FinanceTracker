@@ -18,6 +18,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
+            echo "HOST=${{ secrets.SERVER_HOST }}"
+            echo "USER=${{ secrets.SERVER_USER }}"
             set -e  # Exit immediately if any command fails
             echo "----- Deployment started at $(date) -----"
             cd FinanceTracker
