@@ -21,6 +21,8 @@ if config.config_file_name is not None:
 
 from src.models.user import User
 from src.models.record import Record
+from src.models.category import Category
+from src.models.mono import MonoCard, MonoTransaction
 from src.db.database import Base
 target_metadata = Base.metadata
 

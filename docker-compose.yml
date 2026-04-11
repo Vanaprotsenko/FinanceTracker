@@ -7,7 +7,7 @@ services:
       - "${API_PORT}:${API_INTERNAL_PORT}"
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - RUN_MIGRATIONS=0
+      - RUN_MIGRATIONS=1
     env_file:
       - .env
     depends_on:
