@@ -384,10 +384,11 @@
                 const expH = Math.max((data.expenses / maxVal) * 100, 2);
                 const isLast = i === monthly.length - 1;
                 const delay = i * 60;
+                const incomeBarClass = isLast ? 'bg-on-tertiary-container' : 'bg-on-tertiary-container/30';
 
                 html += `
                 <div class="flex-1 flex items-end justify-center gap-1.5 h-full relative z-10 group cursor-pointer">
-                    <div class="w-4 bg-on-tertiary-container/${isLast ? '' : '30'} rounded-t-full bar-animate" 
+                    <div class="w-4 ${incomeBarClass} rounded-t-full bar-animate" 
                          style="height: ${incH}%; animation-delay: ${delay}ms;"
                          title="Income: ₴${data.income.toLocaleString('uk-UA', {minimumFractionDigits: 2})}">
                     </div>
