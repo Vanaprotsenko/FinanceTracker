@@ -13,8 +13,9 @@ set -e
 if [ "$RUN_MIGRATIONS" = "1" ]; then
   echo "🚀 Running Alembic migrations..."
   alembic upgrade head
+  echo "✅ Migrations applied successfully"
+else
+  echo "⏭️ Skipping Alembic migrations (RUN_MIGRATIONS=$RUN_MIGRATIONS)"
 fi
-
-echo "✅ Migrations applied successfully"
 echo "🚀 Starting app..."
 exec "$@"
