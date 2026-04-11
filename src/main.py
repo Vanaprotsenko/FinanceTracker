@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from src.db.database import engine, Base
-from src.router import user, record, mono
+from src.router import user, record, mono, category
 
 
 logging.basicConfig(
@@ -27,6 +27,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(user.router)
 app.include_router(record.router)
 app.include_router(mono.router)
+app.include_router(category.router)
 
 # Serve frontend static files
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
