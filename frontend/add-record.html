@@ -93,7 +93,7 @@
                 </div>
 
                 <!-- Fields Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-8">
                     <!-- Currency -->
                     <div class="space-y-2">
                         <label class="block font-headline text-xs font-bold text-primary-container ml-1">CURRENCY</label>
@@ -111,6 +111,21 @@
                         </div>
                     </div>
 
+                    <!-- Category -->
+                    <div class="space-y-2">
+                        <label class="block font-headline text-xs font-bold text-primary-container ml-1">CATEGORY</label>
+                        <div class="relative">
+                            <input id="category-input" type="text" list="category-list"
+                                placeholder="Select or type new..."
+                                autocomplete="off"
+                                class="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 pr-10 font-body text-sm focus:ring-2 focus:ring-surface-tint/20 transition-all" />
+                            <datalist id="category-list"></datalist>
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <span class="material-symbols-outlined text-on-surface-variant text-sm">category</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Date -->
                     <div class="space-y-2">
                         <label class="block font-headline text-xs font-bold text-primary-container ml-1">TRANSACTION DATE</label>
@@ -124,7 +139,7 @@
                 <!-- Description -->
                 <div class="space-y-2">
                     <label class="block font-headline text-xs font-bold text-primary-container ml-1">DESCRIPTION</label>
-                    <input id="description-input" type="text" required placeholder="e.g. Silpo Supermarket, Monthly salary..."
+                    <input id="description-input" type="text" placeholder="e.g. Silpo Supermarket, Monthly salary..."
                         class="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 font-body text-sm focus:ring-2 focus:ring-surface-tint/20 transition-all" />
                 </div>
 
@@ -190,6 +205,23 @@
         const now = new Date();
         document.getElementById('date-input').value = now.toISOString().slice(0, 10);
 
+        // Load existing categories into datalist
+        async function loadCategories() {
+            try {
+                const categories = await apiGetCategories();
+                const datalist = document.getElementById('category-list');
+                datalist.innerHTML = '';
+                categories.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.name;
+                    datalist.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Failed to load categories:', err);
+            }
+        }
+        loadCategories();
+
         function setType(type) {
             currentType = type;
             const expBtn = document.getElementById('type-expense');
@@ -228,8 +260,10 @@
                 return;
             }
 
-            if (!description) {
-                errorEl.textContent = 'Please enter a description';
+            const categoryVal = document.getElementById('category-input').value.trim();
+
+            if (!description && !categoryVal) {
+                errorEl.textContent = 'Please enter a description or select a category';
                 errorEl.classList.remove('hidden');
                 return;
             }
@@ -247,6 +281,10 @@
                     currency: currency,
                     description: description,
                 };
+
+                if (categoryVal) {
+                    data.category_name = categoryVal;
+                }
 
                 if (dateVal) {
                     // Create date at noon to avoid timezone issues

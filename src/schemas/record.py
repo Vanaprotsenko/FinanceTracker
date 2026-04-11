@@ -7,9 +7,10 @@ class RecordBase(BaseModel):
     amount: float
     type: Optional[str] = "expense"
     currency: str
-    description: str
+    description: Optional[str] = ""
     mono_card_id: Optional[str] = None
     created_at: Optional[datetime] = None
+    category_name: Optional[str] = None
 
 class RecordCreate(RecordBase):
     class Config:
@@ -22,6 +23,7 @@ class RecordRead(RecordBase):
     id: uuid.UUID
     mono_card_id: Optional[str] = None
     created_at: Optional[datetime] = None
+    category_name: Optional[str] = None
 
     class Config:
         orm_mode = True

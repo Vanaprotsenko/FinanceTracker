@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from src.db.database import Base
+from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, UUID, ForeignKey, Float, DateTime
 
 
@@ -16,4 +17,7 @@ class Record(Base):
     currency = Column(String)
     mono_card_id = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=True, default=datetime.utcnow)
+
+    category_id = Column(UUID, ForeignKey('category.id'), nullable=True)
+    category = relationship('Category', back_populates="records")
 

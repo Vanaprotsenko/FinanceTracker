@@ -57,6 +57,7 @@
             <div class="hidden md:flex items-center gap-8 font-manrope text-sm font-semibold tracking-tight">
                 <a class="text-blue-700 font-bold" href="/">Overview</a>
                 <a class="text-slate-500 hover:bg-slate-100 transition-colors px-2 py-1 rounded" href="/transactions.html">Transactions</a>
+                <a class="text-slate-500 hover:bg-slate-100 transition-colors px-2 py-1 rounded" href="/analytics.html">Analytics</a>
                 <a class="text-slate-500 hover:bg-slate-100 transition-colors px-2 py-1 rounded" href="/accounts.html">Accounts</a>
             </div>
             <div class="flex items-center gap-3">
@@ -82,6 +83,10 @@
                 <a class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out" href="/transactions.html">
                     <span class="material-symbols-outlined">receipt_long</span>
                     <span>Transactions</span>
+                </a>
+                <a class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out" href="/analytics.html">
+                    <span class="material-symbols-outlined">monitoring</span>
+                    <span>Analytics</span>
                 </a>
                 <a class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out" href="/accounts.html">
                     <span class="material-symbols-outlined">account_balance</span>
@@ -191,9 +196,9 @@
         <a href="/add-record.html" class="bg-primary-container p-4 rounded-full -mt-10 shadow-lg active:scale-90 transition-transform">
             <span class="material-symbols-outlined text-white">add</span>
         </a>
-        <a href="/accounts.html" class="flex flex-col items-center gap-1 text-slate-500">
-            <span class="material-symbols-outlined">account_balance</span>
-            <span class="text-[10px] font-bold uppercase tracking-tighter">Bank</span>
+        <a href="/analytics.html" class="flex flex-col items-center gap-1 text-slate-500">
+            <span class="material-symbols-outlined">monitoring</span>
+            <span class="text-[10px] font-bold uppercase tracking-tighter">Insights</span>
         </a>
         <a onclick="logout()" class="flex flex-col items-center gap-1 text-slate-500 cursor-pointer">
             <span class="material-symbols-outlined">logout</span>
@@ -298,7 +303,7 @@
                 }
 
                 if (r.type !== 'income' && amt <= 0) {
-                    const cat = getCategoryName(r.description);
+                    const cat = getCategoryName(r.description, r.category_name);
                     categorySpending[cat] = (categorySpending[cat] || 0) + absAmt;
                 }
             });
@@ -390,7 +395,7 @@
                 const catByCurr = {};
                 records.forEach(r => {
                     if (r.type !== 'income' && r.amount <= 0) {
-                        const cat = getCategoryName(r.description);
+                        const cat = getCategoryName(r.description, r.category_name);
                         const curr = (r.currency || 'UAH').toUpperCase();
                         if (!catByCurr[cat]) catByCurr[cat] = { total: 0, byCurr: {} };
                         const absAmt = Math.abs(r.amount);
@@ -423,7 +428,7 @@
 
             const txHtml = recent.length > 0 ? recent.map(r => {
                 const isIncome = r.type === 'income' || r.amount > 0;
-                const icon = getCategoryIcon(r.description);
+                const icon = getCategoryIcon(r.description, r.category_name);
                 const currSym = getCurrencySymbol(r.currency) || r.currency || '₴';
                 const currCode = (r.currency || 'UAH').toUpperCase();
                 const showCurrBadge = currCode !== 'UAH' && !selectedDisplayCurrency;
@@ -448,7 +453,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-on-surface truncate">${r.description}</p>
-                        <p class="text-xs text-on-surface-variant">${r.created_at ? timeAgo(r.created_at) : ''} \u2022 ${getCategoryName(r.description)}</p>
+                        <p class="text-xs text-on-surface-variant">${r.created_at ? timeAgo(r.created_at) : ''} \u2022 ${getCategoryName(r.description, r.category_name)}</p>
                     </div>
                     <div class="text-right flex items-center gap-2">
                         <div>

@@ -119,6 +119,13 @@ async function apiUpdateRecord(recordId, amount, description, currency, createdA
     return resp.json();
 }
 
+// ─── Categories Endpoints ──────────────────────────────────────────
+async function apiGetCategories() {
+    const resp = await apiFetch('/categories/');
+    if (!resp.ok) throw new Error('Failed to fetch categories');
+    return resp.json();
+}
+
 // ─── Mono Endpoints ─────────────────────────────────────────────────
 async function apiMonoVerifyToken() {
     const resp = await apiFetch('/mono/verifytoken');
@@ -322,9 +329,33 @@ function showToast(message, type = 'success') {
     }, 3500);
 }
 
-// Category icon mapping
-function getCategoryIcon(description) {
-    const desc = (description || '').toLowerCase();
+// Category icon mapping based on category name
+const CATEGORY_ICONS = {
+    'groceries': 'shopping_cart',
+    'dining': 'restaurant',
+    'transport': 'commute',
+    'salary': 'payments',
+    'utilities': 'electric_bolt',
+    'entertainment': 'sports_esports',
+    'health': 'local_hospital',
+    'transfer': 'swap_horiz',
+    'shopping': 'shopping_bag',
+    'education': 'school',
+    'travel': 'flight',
+    'subscriptions': 'subscriptions',
+    'rent': 'home',
+    'gifts': 'card_giftcard',
+    'investments': 'trending_up',
+    'other': 'receipt_long',
+};
+
+function getCategoryIcon(descriptionOrCategoryName, categoryName) {
+    // If categoryName is provided from server, use it for icon lookup
+    const name = (categoryName || '').toLowerCase();
+    if (name && CATEGORY_ICONS[name]) return CATEGORY_ICONS[name];
+
+    // Fallback: guess from description
+    const desc = (descriptionOrCategoryName || '').toLowerCase();
     if (desc.includes('grocer') || desc.includes('supermarket') || desc.includes('silpo') || desc.includes('atb')) return 'shopping_cart';
     if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('dining') || desc.includes('food')) return 'restaurant';
     if (desc.includes('transport') || desc.includes('uber') || desc.includes('bolt') || desc.includes('taxi')) return 'commute';
@@ -336,8 +367,12 @@ function getCategoryIcon(description) {
     return 'receipt_long';
 }
 
-function getCategoryName(description) {
-    const desc = (description || '').toLowerCase();
+function getCategoryName(descriptionOrCategoryName, categoryName) {
+    // If server provides category_name, use it directly
+    if (categoryName) return categoryName;
+
+    // Fallback: guess from description
+    const desc = (descriptionOrCategoryName || '').toLowerCase();
     if (desc.includes('grocer') || desc.includes('supermarket') || desc.includes('silpo') || desc.includes('atb')) return 'Groceries';
     if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('dining') || desc.includes('food')) return 'Dining';
     if (desc.includes('transport') || desc.includes('uber') || desc.includes('bolt') || desc.includes('taxi')) return 'Transport';

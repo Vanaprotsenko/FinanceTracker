@@ -68,6 +68,9 @@
             <a class="bg-blue-900 text-white rounded-lg mx-2 my-1 px-4 py-2 flex items-center gap-3 transition-all duration-300 ease-in-out font-manrope text-sm font-medium" href="/transactions.html">
                 <span class="material-symbols-outlined">receipt_long</span> Transactions
             </a>
+            <a class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out font-manrope text-sm font-medium" href="/analytics.html">
+                <span class="material-symbols-outlined">monitoring</span> Analytics
+            </a>
             <a class="text-slate-600 mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-200 rounded-lg transition-all duration-300 ease-in-out font-manrope text-sm font-medium" href="/accounts.html">
                 <span class="material-symbols-outlined">account_balance</span> Accounts
             </a>
@@ -224,9 +227,9 @@
                 <span class="material-symbols-outlined text-3xl">add</span>
             </a>
         </div>
-        <a class="flex flex-col items-center gap-1 text-slate-500" href="/accounts.html">
-            <span class="material-symbols-outlined">account_balance</span>
-            <span class="text-[10px] font-bold">Vault</span>
+        <a class="flex flex-col items-center gap-1 text-slate-500" href="/analytics.html">
+            <span class="material-symbols-outlined">monitoring</span>
+            <span class="text-[10px] font-bold">Insights</span>
         </a>
         <a onclick="logout()" class="flex flex-col items-center gap-1 text-slate-500 cursor-pointer">
             <span class="material-symbols-outlined">logout</span>
@@ -248,7 +251,7 @@
                 allRecords.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
                 // Populate category filter
-                const cats = new Set(allRecords.map(r => getCategoryName(r.description)));
+                const cats = new Set(allRecords.map(r => getCategoryName(r.description, r.category_name)));
                 const catSelect = document.getElementById('filter-category');
                 cats.forEach(c => {
                     const opt = document.createElement('option');
@@ -303,7 +306,7 @@
             let filtered = allRecords.filter(r => {
                 if (search && !r.description.toLowerCase().includes(search)) return false;
                 if (typeFilter && r.type !== typeFilter) return false;
-                if (catFilter && getCategoryName(r.description) !== catFilter) return false;
+                if (catFilter && getCategoryName(r.description, r.category_name) !== catFilter) return false;
                 if (sourceFilter === 'mono' && !r.mono_card_id) return false;
                 if (sourceFilter === 'manual' && r.mono_card_id) return false;
                 if (currencyFilter && (r.currency || 'UAH').toUpperCase() !== currencyFilter) return false;
@@ -369,8 +372,8 @@
 
             container.innerHTML = records.map((r, i) => {
                 const isIncome = r.type === 'income' || r.amount > 0;
-                const icon = getCategoryIcon(r.description);
-                const cat = getCategoryName(r.description);
+                const icon = getCategoryIcon(r.description, r.category_name);
+                const cat = getCategoryName(r.description, r.category_name);
                 const currSym = getCurrencySymbol(r.currency) || r.currency || '₴';
                 const amtStr = isIncome
                     ? `+${currSym}${Math.abs(r.amount).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}`

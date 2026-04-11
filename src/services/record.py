@@ -2,16 +2,22 @@ import uuid
 import logging
 from src.models.record import Record
 from src.repositories.record import RecordRepository
+from src.repositories.category import CategoryRepository
 from src.schemas.record import RecordCreate
 
 
-
 class RecordService:
-    def __init__(self, record_repository: RecordRepository):
+    def __init__(self, record_repository: RecordRepository, category_repository: CategoryRepository = None):
         self.record_repository = record_repository
+        self.category_repository = category_repository
         self.logger = logging.getLogger(__name__)
 
     def create_record(self, user_id: uuid.UUID, data: RecordCreate, card_id=None) -> Record:
+        category_id = None
+        if data.category_name and self.category_repository:
+            category = self.category_repository.get_or_create(user_id, data.category_name)
+            category_id = category.id
+
         record = Record(
             id=uuid.uuid4(),
             user_id=user_id,
@@ -20,7 +26,8 @@ class RecordService:
             description=data.description,
             currency=data.currency,
             mono_card_id=card_id if card_id else data.mono_card_id,
-            created_at=data.created_at
+            created_at=data.created_at,
+            category_id=category_id,
         )
         return self.record_repository.add(record)
 

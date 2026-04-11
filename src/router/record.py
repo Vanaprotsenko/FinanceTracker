@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import Depends, APIRouter, HTTPException, status
 from src.db.database import get_db
 from src.repositories.record import RecordRepository
+from src.repositories.category import CategoryRepository
 from src.schemas.record import RecordUpdate, RecordCreate, RecordRead, RecordResponse
 from sqlalchemy.orm import Session
 from src.services.record import RecordService
@@ -18,7 +19,23 @@ async def list_records(
 ):
     repository = RecordRepository(db)
     service = RecordService(repository)
-    return service.list_records(user_id)
+    records = service.list_records(user_id)
+
+    # Map category name from relationship into response
+    result = []
+    for r in records:
+        data = RecordRead(
+            id=r.id,
+            amount=r.amount,
+            type=r.type,
+            currency=r.currency,
+            description=r.description,
+            mono_card_id=r.mono_card_id,
+            created_at=r.created_at,
+            category_name=r.category.name if r.category else None,
+        )
+        result.append(data)
+    return result
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=RecordResponse)
 async def create_record(
@@ -27,7 +44,8 @@ async def create_record(
     db: Session = Depends(get_db)
 ):
     repository = RecordRepository(db)
-    service = RecordService(repository)
+    category_repository = CategoryRepository(db)
+    service = RecordService(repository, category_repository)
     record = service.create_record(user_id, record)
 
     return {"id": record.id}
@@ -45,7 +63,16 @@ async def read_record(
     if not record or record.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
         
-    return {"amount": record.amount, "description": record.description}
+    return RecordRead(
+        id=record.id,
+        amount=record.amount,
+        type=record.type,
+        currency=record.currency,
+        description=record.description,
+        mono_card_id=record.mono_card_id,
+        created_at=record.created_at,
+        category_name=record.category.name if record.category else None,
+    )
 
 @router.delete("/{record_id}", status_code=204)
 async def delete_record(
