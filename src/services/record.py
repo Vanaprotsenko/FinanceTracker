@@ -49,7 +49,7 @@ class RecordService:
         tg_record = Record(
             id=uuid.uuid4(),
             user_id=user.id,
-            amount=float(amount_raw),
+            amount=-abs(float(amount_raw)),
             type="expense",
             description="Bill",
             currency="EUR",
