@@ -10,8 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TOKEN = os.getenv("TOKEN_BOT")
-# APP_URL = os.getenv("APP_URL")
-APP_URL = "https://gear-recycler-blend.ngrok-free.dev"
+APP_URL = os.getenv("APP_URL")
 
 def build_login_url(telegram_id: str, telegram_username: str) -> str:
     query = urlencode(
