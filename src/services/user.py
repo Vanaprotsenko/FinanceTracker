@@ -40,12 +40,8 @@ class UserService:
 
         return self.user_repository.add(user)
 
-    def login(
-            self,
-            email: str,
-            password: str,
-            telegram_id: str | None = None,
-    ) -> str:
+    def login(self,email: str,password: str,telegram_id: str | None = None) -> str:
+
         telegram_id = str(telegram_id).strip() if telegram_id is not None else None
         if telegram_id == "":
             telegram_id = None
