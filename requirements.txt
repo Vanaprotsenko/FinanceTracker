@@ -19,3 +19,10 @@ aiofiles==23.2.1
 
 # Telegram
 python-telegram-bot==22.4
+
+# LLM, Data/Image processing
+python-multipart==0.0.26
+openai==1.102.0
+Pillow==11.3.0
+numpy==2.2.6
+opencv-python-headless==4.10.0.84

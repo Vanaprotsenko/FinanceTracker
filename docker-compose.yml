@@ -28,5 +28,14 @@ services:
       timeout: 5s
       retries: 5
 
+  bot:
+    build: .
+    container_name: telegram_bot
+    env_file:
+      - .env
+    depends_on:
+      - api
+    command: python -m src.bot.bot
+
 volumes:
   db_data:

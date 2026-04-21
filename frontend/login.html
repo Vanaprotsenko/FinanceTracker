@@ -144,8 +144,60 @@
         </div>
     </main>
 
-    <script src="/js/api.js"></script>
+    <script src="/js/api.js?v=telegram-flow-v3"></script>
     <script>
+        function formatUiError(err, fallback = 'Request failed') {
+            if (!err) return fallback;
+            if (typeof err === 'string') return err;
+            if (err instanceof Error) return err.message || fallback;
+            if (typeof err.message === 'string') return err.message;
+            if (typeof err.detail === 'string') return err.detail;
+            if (Array.isArray(err.detail)) {
+                return err.detail
+                    .map((item) => item?.msg || JSON.stringify(item))
+                    .join('; ');
+            }
+            if (typeof err.detail === 'object' && err.detail !== null) {
+                try {
+                    return JSON.stringify(err.detail);
+                } catch (_) {
+                    return fallback;
+                }
+            }
+            try {
+                return JSON.stringify(err);
+            } catch (_) {
+                return String(err) || fallback;
+            }
+        }
+
+        function getTelegramAuthFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const telegramId = params.get('telegram_id');
+            if (!telegramId) return null;
+
+            const telegramUsername = params.get('telegram_username') || '';
+            const safeUsername = telegramUsername.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+
+            return {
+                telegramId,
+                telegramUsername,
+                suggestedName: safeUsername || '',
+            };
+        }
+
+        async function handleTelegramAutoAuth() {
+            const tgData = getTelegramAuthFromUrl();
+            if (!tgData) return false;
+
+            switchTab('signup');
+            const signupName = document.getElementById('signup-name');
+            if (signupName && tgData.suggestedName && !signupName.value) {
+                signupName.value = tgData.suggestedName;
+            }
+            return true;
+        }
+
         // If already logged in, redirect
         if (isLoggedIn()) {
             window.location.href = '/';
@@ -190,7 +242,7 @@
                 saveToken(data.access_token);
                 window.location.href = '/';
             } catch (err) {
-                errorEl.textContent = err.message;
+                errorEl.textContent = formatUiError(err, 'Login failed');
                 errorEl.classList.remove('hidden');
                 btnText.textContent = 'Sign In';
                 spinner.classList.add('hidden');
@@ -217,12 +269,22 @@
                 saveToken(data.access_token);
                 window.location.href = '/';
             } catch (err) {
-                errorEl.textContent = err.message;
+                errorEl.textContent = formatUiError(err, 'Signup failed');
                 errorEl.classList.remove('hidden');
                 btnText.textContent = 'Create Account';
                 spinner.classList.add('hidden');
             }
         }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await handleTelegramAutoAuth();
+            } catch (err) {
+                const errorEl = document.getElementById('login-error');
+                errorEl.textContent = formatUiError(err, 'Telegram login failed');
+                errorEl.classList.remove('hidden');
+            }
+        });
     </script>
 </body>
 

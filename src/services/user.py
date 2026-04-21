@@ -1,5 +1,3 @@
-import json
-from src.bot.utils.utils import verify_telegram_init_data
 from src.models.user import User
 from src.repositories.user import UserRepository
 from src.services.auth_service import AuthService
@@ -9,9 +7,27 @@ class UserService:
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
 
-    def create_user(self, name: str, email: str, password: str, init_data: str = None) -> User:
+    def create_user(
+            self,
+            name: str,
+            email: str,
+            password: str,
+            telegram_id=None
+    ) -> User:
+        telegram_id = str(telegram_id).strip() if telegram_id is not None else None
+        if telegram_id == "":
+            telegram_id = None
+
         existing_user = self.user_repository.get_by_email(email)
+        existing_tg_user = self.user_repository.get_by_telegram_id(telegram_id) if telegram_id else None
+
+        if existing_tg_user and (not existing_user or existing_tg_user.id != existing_user.id):
+            raise ValueError("Telegram account is already linked to another user")
+
         if existing_user:
+            if telegram_id and not existing_user.telegram_id:
+                existing_user.telegram_id = str(telegram_id)
+                return self.user_repository.update(existing_user)
             raise ValueError("User already exists")
 
         hashed_password = AuthService.hash_password(password)
@@ -19,40 +35,44 @@ class UserService:
             name=name,
             email=email,
             password=hashed_password,
+            telegram_id=str(telegram_id) if telegram_id is not None else None
         )
-
-        if init_data:
-            try:
-                data = verify_telegram_init_data(init_data)
-                telegram_user = json.loads(data["user"])
-                user.telegram_id = str(telegram_user["id"])
-                user.telegram_username = telegram_user.get("username")
-            except Exception as e:
-                raise ValueError(f"Invalid telegram data: {str(e)}")
 
         return self.user_repository.add(user)
 
-    def login(self, email: str, password: str, init_data: str = None) -> str:
+    def login(
+            self,
+            email: str,
+            password: str,
+            telegram_id: str | None = None,
+    ) -> str:
+        telegram_id = str(telegram_id).strip() if telegram_id is not None else None
+        if telegram_id == "":
+            telegram_id = None
+
         user = self.user_repository.get_by_email(email)
         if not user:
             raise ValueError("Invalid credentials")
 
         if not AuthService.verify_password(password, user.password):
             raise ValueError("Invalid credentials")
-        
-        if init_data and not user.telegram_id:
-            from src.bot.utils.utils import verify_telegram_init_data
-            import json
-            try:
-                data = verify_telegram_init_data(init_data)
-                telegram_user = json.loads(data["user"])
-                user.telegram_id = str(telegram_user["id"])
-                user.telegram_username = telegram_user.get("username")
+
+        if telegram_id:
+            linked_user = self.user_repository.get_by_telegram_id(telegram_id)
+            if linked_user and linked_user.id != user.id:
+                raise ValueError("Telegram account is already linked to another user")
+            if not user.telegram_id:
+                user.telegram_id = str(telegram_id)
                 self.user_repository.update(user)
-            except Exception:
-                pass # Don't block login if telegram linking fails
 
         return AuthService.create_access_token(data={"sub": str(user.id)})
+
+    @staticmethod
+    def get_email_and_password(user: User) -> tuple[str, str]:
+        return user.email, user.password
+
+    def get_user_by_tg_id(self, telegram_id: str) -> User:
+        return self.user_repository.get_by_telegram_id(telegram_id)
 
     def read_user(self, email: str) -> User:
         return self.user_repository.read(email)

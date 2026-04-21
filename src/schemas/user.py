@@ -8,6 +8,8 @@ class UserBase(BaseModel):
 class ReadUser(BaseModel):
     email: EmailStr
     name: str
+    telegram_username: str | None = None
+    telegram_id: str | None = None
 
     class Config:
         orm_mode = True
@@ -18,7 +20,7 @@ class UpdateUser(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr
     name: str
-    init_data: str | None = None
+    password: str
 
     class Config:
         orm_mode = True

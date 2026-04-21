@@ -1,9 +1,32 @@
-/**
- * FinanceTracker API Client
- * Handles JWT auth, token persistence, and all backend endpoint calls.
- */
-
 const API_BASE = window.location.origin;
+
+function parseApiErrorDetail(detail, fallbackMessage) {
+    if (!detail) return fallbackMessage;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+        const messages = detail
+            .map((item) => {
+                if (typeof item === 'string') return item;
+                if (item && typeof item === 'object') {
+                    const path = Array.isArray(item.loc) ? item.loc.join('.') : '';
+                    const msg = item.msg || JSON.stringify(item);
+                    return path ? `${path}: ${msg}` : msg;
+                }
+                return String(item);
+            })
+            .filter(Boolean);
+        return messages.length ? messages.join('; ') : fallbackMessage;
+    }
+    if (typeof detail === 'object') {
+        if (typeof detail.msg === 'string') return detail.msg;
+        try {
+            return JSON.stringify(detail);
+        } catch (_) {
+            return fallbackMessage;
+        }
+    }
+    return String(detail);
+}
 
 // ─── Token Management ───────────────────────────────────────────────
 function saveToken(token) {
@@ -61,30 +84,45 @@ async function apiFetch(path, options = {}) {
 
 // ─── Auth Endpoints ─────────────────────────────────────────────────
 async function apiSignup(email, name, password) {
-    const resp = await apiFetch(`/auth/signup?password=${encodeURIComponent(password)}`, {
+    const params = new URLSearchParams(window.location.search);
+    const telegramId = params.get('telegram_id');
+    const telegramUsername = params.get('telegram_username');
+    const query = new URLSearchParams();
+    if (telegramId) query.set('telegram_id', String(telegramId));
+    if (telegramUsername) query.set('telegram_username', telegramUsername);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    const resp = await apiFetch(`/auth/signup${suffix}`, {
         method: 'POST',
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, password }),
     });
     if (!resp.ok) {
         const err = await resp.json();
-        throw new Error(err.detail || 'Signup failed');
+        throw new Error(parseApiErrorDetail(err.detail, 'Signup failed'));
     }
     return resp.json();
 }
 
 async function apiLogin(email, password) {
-    const resp = await apiFetch('/auth/login', {
+    const params = new URLSearchParams(window.location.search);
+    const telegramId = params.get('telegram_id');
+    const telegramUsername = params.get('telegram_username');
+    const query = new URLSearchParams();
+    if (telegramId) query.set('telegram_id', String(telegramId));
+    if (telegramUsername) query.set('telegram_username', telegramUsername);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    const resp = await apiFetch(`/auth/login${suffix}`, {
         method: 'POST',
         body: JSON.stringify({ email, password }),
     });
     if (!resp.ok) {
         const err = await resp.json();
-        throw new Error(err.detail || 'Login failed');
+        throw new Error(parseApiErrorDetail(err.detail, 'Login failed'));
     }
     return resp.json();
 }
 
-// ─── Records Endpoints ─────────────────────────────────────────────
 async function apiGetRecords() {
     const resp = await apiFetch('/records/');
     if (!resp.ok) throw new Error('Failed to fetch records');

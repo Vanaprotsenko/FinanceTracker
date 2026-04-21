@@ -1,0 +1,1 @@
+Extract only the total amount from this receipt. Return only a number.

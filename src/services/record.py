@@ -1,8 +1,12 @@
 import uuid
 import logging
+from datetime import datetime
+
+from src.integrations.llm_service import LLMService
 from src.models.record import Record
 from src.repositories.record import RecordRepository
 from src.repositories.category import CategoryRepository
+from src.repositories.user import UserRepository
 from src.schemas.record import RecordCreate
 
 
@@ -10,7 +14,9 @@ class RecordService:
     def __init__(self, record_repository: RecordRepository, category_repository: CategoryRepository = None):
         self.record_repository = record_repository
         self.category_repository = category_repository
+        self.user_repository = UserRepository(record_repository.session)
         self.logger = logging.getLogger(__name__)
+        self.llm_service = LLMService()
 
     def create_record(self, user_id: uuid.UUID, data: RecordCreate, card_id=None) -> Record:
         category_id = None
@@ -30,6 +36,27 @@ class RecordService:
             category_id=category_id,
         )
         return self.record_repository.add(record)
+
+    async def create_record_from_tg(self,telegram_id: str,file_bytes,):
+        user = self.user_repository.get_by_telegram_id(str(telegram_id).strip())
+
+        if not user:
+            raise ValueError("User not found for telegram_id")
+
+        self.logger.info(f"User found: {user}")
+
+        amount_raw = await self.llm_service.get_price_from_llm_service(file_bytes)
+        tg_record = Record(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            amount=float(amount_raw),
+            type="expense",
+            description="Bill",
+            currency="EUR",
+            created_at=datetime.now()
+        )
+        self.logger.info(f"Record created: {tg_record}")
+        return self.record_repository.add(tg_record)
 
     def create_records(self, user_id: uuid.UUID, records: list[RecordCreate], card_id) -> dict:
         created = 0
