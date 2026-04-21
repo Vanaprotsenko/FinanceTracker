@@ -144,10 +144,8 @@
         </div>
     </main>
 
-    <script src="/js/api.js?v=telegram-flow-v2"></script>
+    <script src="/js/api.js?v=telegram-flow-v3"></script>
     <script>
-        const TG_PASSWORD_SUFFIX = '-ft-telegram';
-
         function formatUiError(err, fallback = 'Request failed') {
             if (!err) return fallback;
             if (typeof err === 'string') return err;
@@ -178,18 +176,13 @@
             const telegramId = params.get('telegram_id');
             if (!telegramId) return null;
 
-            const telegramUsername = params.get('telegram_username') || 'telegram_user';
-            const safeUsername = telegramUsername.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase() || 'telegram_user';
-            const email = `tg_${telegramId}@financetracker.local`;
-            const name = safeUsername;
-            const password = `${telegramId}${TG_PASSWORD_SUFFIX}`;
+            const telegramUsername = params.get('telegram_username') || '';
+            const safeUsername = telegramUsername.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
 
             return {
                 telegramId,
                 telegramUsername,
-                email,
-                name,
-                password,
+                suggestedName: safeUsername || '',
             };
         }
 
@@ -198,45 +191,10 @@
             if (!tgData) return false;
 
             switchTab('signup');
-
-            const loginError = document.getElementById('login-error');
-            loginError.classList.add('hidden');
-
-            try {
-                const signupFn = typeof apiTelegramSignup === 'function'
-                    ? apiTelegramSignup
-                    : async (email, name, password, telegramId, telegramUsername) => {
-                        const query = new URLSearchParams({
-                            telegram_id: String(telegramId),
-                            telegram_username: telegramUsername || '',
-                        });
-                        const resp = await apiFetch(`/auth/tg-signup?${query.toString()}`, {
-                            method: 'POST',
-                            body: JSON.stringify({ email, name, password }),
-                        });
-                        if (!resp.ok) {
-                            const err = await resp.json();
-                            throw new Error(formatUiError(err, 'Telegram signup failed'));
-                        }
-                        return resp.json();
-                    };
-
-                await signupFn(
-                    tgData.email,
-                    tgData.name,
-                    tgData.password,
-                    tgData.telegramId,
-                    tgData.telegramUsername
-                );
-            } catch (err) {
-                if (!String(err.message).includes('User already exists')) {
-                    throw err;
-                }
+            const signupName = document.getElementById('signup-name');
+            if (signupName && tgData.suggestedName && !signupName.value) {
+                signupName.value = tgData.suggestedName;
             }
-
-            const data = await apiLogin(tgData.email, tgData.password);
-            saveToken(data.access_token);
-            window.location.href = '/';
             return true;
         }
 

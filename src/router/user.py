@@ -11,13 +11,19 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/signup", status_code=status.HTTP_201_CREATED, response_model=ReadUser)
 async def signup(
     user_in: UserCreate,
+    telegram_id: str | None = Query(None),
     session: Session = Depends(get_db)
 ):
     repository = UserRepository(session)
     service = UserService(repository)
 
     try:
-        user = service.create_user(user_in.name, user_in.email, user_in.password)
+        user = service.create_user(
+            user_in.name,
+            user_in.email,
+            user_in.password,
+            telegram_id,
+        )
         return user
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -25,36 +31,18 @@ async def signup(
 @router.post("/login", response_model=Token)
 async def login(
     login_data: UserLogin,
+    telegram_id: str | None = Query(None),
     session: Session = Depends(get_db)
 ):
     repository = UserRepository(session)
     service = UserService(repository)
     
     try:
-        token = service.login(login_data.email, login_data.password)
+        token = service.login(
+            login_data.email,
+            login_data.password,
+            telegram_id,
+        )
         return {"access_token": token, "token_type": "bearer"}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-
-
-@router.post("/tg-signup")
-async def tg_login(
-    user_in: UserCreate,
-    telegram_id: int = Query(...),
-    telegram_username: str = Query(None),
-    session: Session = Depends(get_db)
-):
-    repository = UserRepository(session)
-    service = UserService(repository)
-    try:
-        user = service.create_user(
-            user_in.name,
-            user_in.email,
-            user_in.password,
-            telegram_username,
-            telegram_id,
-        )
-        return user
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-

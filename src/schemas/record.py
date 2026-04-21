@@ -33,3 +33,7 @@ class RecordUpdate(BaseModel):
 
 class RecordDelete(BaseModel):
     id: uuid.UUID
+
+
+class RecordFromTG(BaseModel):
+    response: str

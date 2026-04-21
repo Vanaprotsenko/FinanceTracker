@@ -84,7 +84,15 @@ async function apiFetch(path, options = {}) {
 
 // ─── Auth Endpoints ─────────────────────────────────────────────────
 async function apiSignup(email, name, password) {
-    const resp = await apiFetch('/auth/signup', {
+    const params = new URLSearchParams(window.location.search);
+    const telegramId = params.get('telegram_id');
+    const telegramUsername = params.get('telegram_username');
+    const query = new URLSearchParams();
+    if (telegramId) query.set('telegram_id', String(telegramId));
+    if (telegramUsername) query.set('telegram_username', telegramUsername);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    const resp = await apiFetch(`/auth/signup${suffix}`, {
         method: 'POST',
         body: JSON.stringify({ email, name, password }),
     });
@@ -96,7 +104,15 @@ async function apiSignup(email, name, password) {
 }
 
 async function apiLogin(email, password) {
-    const resp = await apiFetch('/auth/login', {
+    const params = new URLSearchParams(window.location.search);
+    const telegramId = params.get('telegram_id');
+    const telegramUsername = params.get('telegram_username');
+    const query = new URLSearchParams();
+    if (telegramId) query.set('telegram_id', String(telegramId));
+    if (telegramUsername) query.set('telegram_username', telegramUsername);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    const resp = await apiFetch(`/auth/login${suffix}`, {
         method: 'POST',
         body: JSON.stringify({ email, password }),
     });
@@ -107,23 +123,6 @@ async function apiLogin(email, password) {
     return resp.json();
 }
 
-async function apiTelegramSignup(email, name, password, telegramId, telegramUsername) {
-    const query = new URLSearchParams({
-        telegram_id: String(telegramId),
-        telegram_username: telegramUsername || '',
-    });
-    const resp = await apiFetch(`/auth/tg-signup?${query.toString()}`, {
-        method: 'POST',
-        body: JSON.stringify({ email, name, password }),
-    });
-    if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(parseApiErrorDetail(err.detail, 'Telegram signup failed'));
-    }
-    return resp.json();
-}
-
-// ─── Records Endpoints ─────────────────────────────────────────────
 async function apiGetRecords() {
     const resp = await apiFetch('/records/');
     if (!resp.ok) throw new Error('Failed to fetch records');

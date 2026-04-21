@@ -12,6 +12,12 @@ class UserRepository(Repository):
     def get_by_id(self, id: int) -> User:
         return self.session.query(User).filter_by(id=id).first()
 
+    def get_by_telegram_id(self, telegram_id: str) -> User:
+        return self.session.query(User).filter_by(telegram_id=str(telegram_id)).first()
+
+    def get_by_telegram_username(self, telegram_username: str) -> User:
+        return self.session.query(User).filter_by(telegram_username=telegram_username).first()
+
     def add(self, user: User):
         self.session.add(user)
         self.session.commit()
@@ -30,9 +36,6 @@ class UserRepository(Repository):
         self.session.delete(user)
         self.session.commit()
         return user
-
-    def get_by_telegram_id(self, telegram_id: str) -> User:
-        return self.session.query(User).filter_by(telegram_id=str(telegram_id)).first()
 
     def update(self, user: User) -> User:
         self.session.commit()

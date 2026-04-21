@@ -1,11 +1,11 @@
 import uuid
 from typing import Optional
 from datetime import datetime
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status, UploadFile, File, Form
 from src.db.database import get_db
 from src.repositories.record import RecordRepository
 from src.repositories.category import CategoryRepository
-from src.schemas.record import RecordUpdate, RecordCreate, RecordRead, RecordResponse
+from src.schemas.record import RecordUpdate, RecordCreate, RecordRead, RecordResponse, RecordFromTG
 from sqlalchemy.orm import Session
 from src.services.record import RecordService
 from src.dependencies.auth import get_current_user_id
@@ -82,8 +82,7 @@ async def delete_record(
 ):
     repository = RecordRepository(session)
     service = RecordService(repository)
-    
-    # Check if record exists and belongs to user
+
     record = service.read_records(record_id)
     if not record or record.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
@@ -102,8 +101,7 @@ async def update_record(
 ):
     repository = RecordRepository(session)
     service = RecordService(repository)
-    
-    # Check if record exists and belongs to user
+
     record = service.read_records(record_id)
     if not record or record.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
@@ -111,3 +109,20 @@ async def update_record(
     updated_record = service.update_record(record_id, user_id=user_id, amount=amount, description=description, currency=currency, created_at=created_at)
 
     return {"id": updated_record.id}
+
+@router.post("/save-record-photo", status_code=200, response_model=RecordFromTG)
+async def save_record_tg(
+    file: UploadFile = File(...),
+    telegram_id: str = Form(...),
+    session: Session = Depends(get_db)
+):
+    repository = RecordRepository(session)
+    category_repository = CategoryRepository(session)
+    service = RecordService(repository, category_repository)
+    file_bytes = await file.read()
+    await service.create_record_from_tg(
+        telegram_id=telegram_id,
+        file_bytes=file_bytes,
+    )
+
+    return {"response": "The record was successfully saved"}
