@@ -66,4 +66,4 @@ class LLMService:
         )
         content = response.choices[0].message.content
         self.logger.info(f"LLM service response: {content}")
-        return content or ""
+        return content
