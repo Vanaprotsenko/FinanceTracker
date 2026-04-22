@@ -63,11 +63,12 @@ class UserService:
 
         return AuthService.create_access_token(data={"sub": str(user.id)})
 
-    @staticmethod
-    def get_email_and_password(user: User) -> tuple[str, str]:
-        return user.email, user.password
+    def verify_user_by_telegram(self, telegram_id: str):
+        user = self.user_repository.get_by_telegram_id(telegram_id)
 
-    def get_user_by_tg_id(self, telegram_id: str) -> User:
+        if not user:
+            raise ValueError("User by telegram id not found")
+
         return self.user_repository.get_by_telegram_id(telegram_id)
 
     def read_user(self, email: str) -> User:

@@ -44,3 +44,6 @@ class UserSaveMonoToken(BaseModel):
 
 class UserResponseMonoToken(BaseModel):
     response: str
+
+class VerifyTelegramRequest(BaseModel):
+    telegram_id: str

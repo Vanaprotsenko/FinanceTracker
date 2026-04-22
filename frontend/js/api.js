@@ -254,6 +254,12 @@ async function apiMonoSync(cardId) {
     return resp.json();
 }
 
+async function apiGetPublicConfig() {
+    const resp = await fetch(`${API_BASE}/public/config`);
+    if (!resp.ok) throw new Error('Failed to fetch public config');
+    return resp.json();
+}
+
 const CURRENCY_MAP = {
     '980': { symbol: '₴', name: 'UAH' },
     '840': { symbol: '$', name: 'USD' },

@@ -82,14 +82,32 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             timeout=30
         )
 
+    logger.info(f"Photo upload response: {response.json()}")
+
     if response.status_code == 200:
         await update.message.reply_text("✅ Photo uploaded successfully! Receipt is being processed.")
     else:
         await update.message.reply_text("Failed to process photo")
 
+async def check_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{APP_URL}/auth/verify-telegram-id",
+            json={
+                "telegram_id": update.message.from_user.id
+            },
+            timeout=30
+        )
+
+    if response.status_code == 200:
+        await update.message.reply_text("The user is logged in!")
+    else:
+        await update.message.reply_text("The user is not logged in!\nPlease login in web app by command /start")
+
 
 app = Application.builder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("check_login", check_login))
 app.add_handler(MessageHandler(filters.TEXT, every_message))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 

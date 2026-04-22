@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from src.db.database import get_db
 from src.repositories.user import UserRepository
-from src.schemas.user import UserCreate, ReadUser, Token, UserLogin
+from src.schemas.user import UserCreate, ReadUser, Token, UserLogin, VerifyTelegramRequest
 from src.services.user import UserService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -44,5 +44,19 @@ async def login(
             telegram_id,
         )
         return {"access_token": token, "token_type": "bearer"}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+
+@router.post("/verify-telegram-id", status_code=status.HTTP_200_OK)
+async def verify_telegram_id(
+    payload: VerifyTelegramRequest,
+    session: Session = Depends(get_db)
+):
+    repository = UserRepository(session)
+    service = UserService(repository)
+    try:
+        results = service.verify_user_by_telegram(payload.telegram_id)
+        return results
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
